@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <cstring>
+using namespace std;
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
@@ -62,6 +63,7 @@ int main() {
     }
 
     while (true) {
+        cout<<"HERE MAKING"<<endl;
         newSocket = (int*)malloc(sizeof(int));
         if ((*newSocket = accept(serverFd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
             perror("accept");
