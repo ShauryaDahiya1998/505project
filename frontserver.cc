@@ -26,6 +26,7 @@ void* handleClient(void* arg) {
     pthread_exit(NULL);
 }
 
+
 int main() {
     int serverFd, *newSocket;
     struct sockaddr_in address;
