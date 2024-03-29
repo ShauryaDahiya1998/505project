@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <memory>
+#include "customlib.h"
 
 using namespace std;
 
@@ -164,6 +165,8 @@ void signalHandlerWorkerThread(int signal) {
     }
 }
 
+
+
 // Worker function to handle the client requests
 void *worker(void *arg) {
 
@@ -207,10 +210,32 @@ void *worker(void *arg) {
 
     //If the data is received successfully, add to tempcommand and process the command
     tmpcommand += buffer;
-    cout<<tmpcommand<<endl;
-    string content = "Hello from the C++ server using pthread";
-    string httpResponse = "HTTP/1.1 200 OK\r\nDate: Fri, 31 Dec 1999 23:59:59 GMT\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(content.length()) + "\r\n\r\n" + content;//Hello from the C++ server using pthread!";
-    send(fd, httpResponse.c_str(), httpResponse.length(),0);
+    string content = "";
+    // check the type of the method, it is till the first space. Could be GET, POST, PUT, DELETE, HEAD
+    if (tmpcommand.find(" ") == string::npos) {
+      content = "404 Bad request";
+    } else {
+      size_t pos = tmpcommand.find(" ");
+      string method = tmpcommand.substr(0, pos);
+      if (method == "GET") {
+        content = getMethodHandler(tmpcommand);
+      } else if (method == "POST") {
+        content = "POST method";
+      } else if (method == "PUT") {
+        content = "PUT method";
+      } else if (method == "DELETE") {
+        content = "DELETE method";
+      } else if (method == "HEAD") {
+        content = "HEAD method";
+      } else {
+        content = "404 Bad request";
+      }
+    }
+    
+    // string content = "Hello from the C++ server using pthread";
+    // string httpResponse = "HTTP/1.1 200 OK\r\nDate: Fri, 31 Dec 1999 23:59:59 GMT\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(content.length()) + "\r\n\r\n" + content;//Hello from the C++ server using pthread!";
+    send(fd, content.c_str(), content.length(),0);
+    tmpcommand = "";
   
 
     // int commandValue;

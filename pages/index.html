@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Page</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #9575cd, #ff5252);
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .login-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    width: 300px;
+  }
+
+  .login-container h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .input-group {
+    margin-bottom: 1rem;
+  }
+
+  .input-group label {
+    display: block;
+    margin-bottom: .5rem;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+
+  .actions {
+    margin-top: 1rem;
+  }
+
+  .actions button {
+    width: 100%;
+    padding: .7rem;
+    border: none;
+    background: #9575cd;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .actions button:hover {
+    background: #7e57c2;
+  }
+
+  .actions .remember-me {
+    display: flex;
+    align-items: center;
+    margin-bottom: .5rem;
+  }
+
+  .actions input[type="checkbox"] {
+    margin-right: .5rem;
+  }
+
+  .actions a {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="avatar">
+    <img src="path/to/your/avatar.png" alt="Avatar">
+  </div>
+  <div class="input-group">
+    <label for="email">Email ID</label>
+    <input type="email" id="email" required>
+  </div>
+  <div class="input-group">
+    <label for="password">Password</label>
+    <input type="password" id="password" required>
+  </div>
+  <div class="actions">
+    <div class="remember-me">
+      <input type="checkbox" id="remember-me">
+      <label for="remember-me">Remember me</label>
+    </div>
+    <button onclick="login()">LOGIN</button>
+    <a href="#">Forgot Password?</a>
+  </div>
+</div>
+
+<script>
+  function login() {
+  var email = document.getElementById('email').value;
+  var password = document.getElementById('password').value;
+
+  if (email === '' || password === '') {
+    alert('Please enter both email and password');
+  } else {
+    // Define the payload
+    const data = { email: email, password: password };
+
+    // Use fetch API to send the request
+    fetch('http://localhost:8080/', {
+      method: 'POST', // or 'PUT'
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json()) // Assuming the server responds with JSON
+    .then(data => {
+      console.log('Success:', data); // Process success response
+      // You can redirect the user or perform other actions based on the response
+      // For example, if you receive a token, you might want to store it for future requests
+    })
+    .catch((error) => {
+      console.error('Error:', error); // Handle any errors
+    });
+  }
+}
+</script>
+
+</body>
+</html>
