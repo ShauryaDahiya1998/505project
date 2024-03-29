@@ -1,4 +1,4 @@
-TARGETS = frontserver frontserver1
+TARGETS = frontserver frontserverV1
 
 all: $(TARGETS)
 
@@ -8,5 +8,5 @@ all: $(TARGETS)
 frontserver: frontserver.o
 	g++ $^ -lpthread -o $@
 
-frontserver1: frontserver1.o
+frontserverV1: frontserverV1.o
 	g++ $^ -lpthread -o $@
