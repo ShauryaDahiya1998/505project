@@ -16,7 +16,19 @@ class UserSession {
     string data;
     string mdata;
     string expirationTime;
+    string sessionID;
     void setSession(string username, string email, string data, string mdata, string expirationTime);
+};
+
+class HttpResponseCreator {
+  public:
+    string content_type;
+    string methodType;
+    string message;
+    string status;
+    string sessionID;
+    string createPostResponse(HttpResponseCreator response);
+    string createGetResponse(HttpResponseCreator response);
 };
 
 extern map<string, UserSession> sessions;
