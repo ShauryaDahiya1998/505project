@@ -231,11 +231,21 @@
 </div>
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
-  loadLoginForm(); // Load the login form by default
+  //if url is /login then load login form
+  console.log(window.location.pathname);
+  if (window.location.pathname === '/login') {
+    loadLoginForm();
+  } else {
+    //if url is /signup then load signup form
+    loadSignupForm();
+  }
+  
 });
 
 function loadLoginForm() {
+  window.history.pushState({ page: "login" }, "Login", "/login");
   const formContainer = document.getElementById('form-container');
   formContainer.innerHTML = `
     <div class="input-group">
@@ -256,9 +266,11 @@ function loadLoginForm() {
     </div>
     <button class="toggle-form" onclick="loadSignupForm()">Sign Up</button>
   `;
+  
 }
 
 function loadSignupForm() {
+  window.history.pushState({ page: "signup" }, "signup", "/");
   const formContainer = document.getElementById('form-container');
   formContainer.innerHTML = `
     <div class="input-group">
@@ -310,40 +322,69 @@ function login() {
       console.error('Error:', error); // Handle any errors
     });
   }
+  
 }
+function showPopup(message, clearFields, success) {
+  const popup = document.createElement('div');
+  popup.innerHTML = `
+    <div class="popup-container" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center;">
+      <div class="popup" style="background: white; padding: 2rem; border-radius: 10px; text-align: center;">
+        <p>${message}</p>
+        <button id="popup-ok">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
 
+  document.getElementById('popup-ok').onclick = function() {
+    popup.remove();
+    if (clearFields) {
+      document.getElementById('username').value = '';
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+    }
+    if (success) {
+      loadLoginForm();
+    }
+  }
+}
 function signup() {
-  // Add logic to handle signup
   var username = document.getElementById('username').value;
   var email = document.getElementById('email').value;
   var password = document.getElementById('password').value;
 
-  // Add logic to send signup information to server
   if (username === '' || email === '' || password === '') {
-    alert('Please enter all fields');
+    showPopup('Please enter all fields', false);
   } else {
-    // Define the payload
     const data = { username: username, email: email, password: password };
 
-    // Use fetch API to send the request
     fetch('http://localhost:8080/signup', {
-      method: 'POST', // or 'PUT'
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
     })
-    .then(response => response.json()) // Assuming the server responds with JSON
+    .then(response => response.json())
     .then(data => {
-      console.log('Success:', data); // Process success response
-      // You can redirect the user or perform other actions based on the response
-      // For example, if you receive a token, you might want to store it for future requests
+      if (data.message === "Account already exists") {
+        username.value = '';
+        email.value = '';
+        password.value = '';
+        // Show popup for already existing user without redirecting
+        showPopup("An account with this email already exists.", true, false);
+      } else {
+        // Show popup for successful account creation and redirect to login
+        showPopup('Successfully created account', false, true);
+      }
     })
     .catch((error) => {
-      console.error('Error:', error); // Handle any errors
+      console.error('Error:', error);
+      showPopup('An error occurred. Please try again.', false, false);
     });
   }
 }
+
 </script>
 
 </body>
