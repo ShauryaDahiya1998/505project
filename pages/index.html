@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -116,6 +116,217 @@
 
     // Use fetch API to send the request
     fetch('http://localhost:8080/', {
+      method: 'POST', // or 'PUT'
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json()) // Assuming the server responds with JSON
+    .then(data => {
+      console.log('Success:', data); // Process success response
+      // You can redirect the user or perform other actions based on the response
+      // For example, if you receive a token, you might want to store it for future requests
+    })
+    .catch((error) => {
+      console.error('Error:', error); // Handle any errors
+    });
+  }
+}
+</script>
+
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Page</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #9575cd, #ff5252);
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .login-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    width: 300px;
+  }
+
+  .login-container h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .input-group {
+    margin-bottom: 1rem;
+  }
+
+  .input-group label {
+    display: block;
+    margin-bottom: .5rem;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+
+  .actions {
+    margin-top: 1rem;
+  }
+
+  .actions button, .toggle-form {
+    width: 100%;
+    padding: .7rem;
+    border: none;
+    background: #9575cd;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .actions button:hover, .toggle-form:hover {
+    background: #7e57c2;
+  }
+
+  .toggle-form {
+    margin-top: 1rem;
+  }
+
+  .actions .remember-me {
+    display: flex;
+    align-items: center;
+    margin-bottom: .5rem;
+  }
+
+  .actions input[type="checkbox"] {
+    margin-right: .5rem;
+  }
+
+  .actions a {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-container" id="form-container">
+  <!-- Dynamic form content will be loaded here -->
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  loadLoginForm(); // Load the login form by default
+});
+
+function loadLoginForm() {
+  const formContainer = document.getElementById('form-container');
+  formContainer.innerHTML = `
+    <div class="input-group">
+      <label for="email">Email ID</label>
+      <input type="email" id="email" required>
+    </div>
+    <div class="input-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" required>
+    </div>
+    <div class="actions">
+      <div class="remember-me">
+        <input type="checkbox" id="remember-me">
+        <label for="remember-me">Remember me</label>
+      </div>
+      <button onclick="login()">LOGIN</button>
+      <a href="#">Forgot Password?</a>
+    </div>
+    <button class="toggle-form" onclick="loadSignupForm()">Sign Up</button>
+  `;
+}
+
+function loadSignupForm() {
+  const formContainer = document.getElementById('form-container');
+  formContainer.innerHTML = `
+    <div class="input-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" required>
+    </div>
+    <div class="input-group">
+      <label for="email">Email ID</label>
+      <input type="email" id="email" required>
+    </div>
+    <div class="input-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" required>
+    </div>
+    <div class="actions">
+      <button onclick="signup()">SIGN UP</button>
+    </div>
+    <button class="toggle-form" onclick="loadLoginForm()">Login</button>
+  `;
+}
+
+function login() {
+  // Your existing login function
+  var email = document.getElementById('email').value;
+  var password = document.getElementById('password').value;
+
+  // Add logic to handle login
+  if (email === '' || password === '') {
+    alert('Please enter both email and password');
+  } else {
+    // Define the payload
+    const data = { email: email, password: password };
+
+    // Use fetch API to send the request
+    fetch('http://localhost:8080/login', {
+      method: 'POST', // or 'PUT'
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json()) // Assuming the server responds with JSON
+    .then(data => {
+      console.log('Success:', data); // Process success response
+      // You can redirect the user or perform other actions based on the response
+      // For example, if you receive a token, you might want to store it for future requests
+    })
+    .catch((error) => {
+      console.error('Error:', error); // Handle any errors
+    });
+  }
+}
+
+function signup() {
+  // Add logic to handle signup
+  var username = document.getElementById('username').value;
+  var email = document.getElementById('email').value;
+  var password = document.getElementById('password').value;
+
+  // Add logic to send signup information to server
+  if (username === '' || email === '' || password === '') {
+    alert('Please enter all fields');
+  } else {
+    // Define the payload
+    const data = { username: username, email: email, password: password };
+
+    // Use fetch API to send the request
+    fetch('http://localhost:8080/signup', {
       method: 'POST', // or 'PUT'
       headers: {
         'Content-Type': 'application/json',
