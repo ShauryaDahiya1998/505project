@@ -235,8 +235,6 @@ class StorageOpsHandler : virtual public StorageOpsIf {
 
   bool put(const std::string& row, const std::string& col, const std::string& value) {
     // Your implementation goes here
-    
-    std::cout << "HERE";
     tablet[row][col] = value;
     replicatePut(row,col,value);
     std::string log = "PUT " + row + " " + col + " " + value;
