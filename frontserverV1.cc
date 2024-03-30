@@ -209,7 +209,7 @@ void *worker(void *arg) {
     }
 
     //If the data is received successfully, add to tempcommand and process the command
-    tmpcommand += buffer;
+    tmpcommand = buffer;
     string content = "";
     cout<<tmpcommand<<endl;
     // check the type of the method, it is till the first space. Could be GET, POST, PUT, DELETE, HEAD
