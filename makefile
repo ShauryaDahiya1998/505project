@@ -1,12 +1,21 @@
-TARGETS = frontserver frontserverV1
+TARGET = myserver
+# Define source files
+SOURCES = getMethod.cc postMethod.cc frontserverV1.cc
+# Automatically generate a list of object files
+OBJECTS = $(SOURCES:.cc=.o)
+# Default target
+all: $(TARGET)
+# Rule to link the executable
+$(TARGET): $(OBJECTS)
+	@echo "Linking..."
+	@g++ -o $(TARGET) $(OBJECTS) -lpthread
 
-all: $(TARGETS)
-
+# Rule to compile source files to object files
 %.o: %.cc
-	g++ $^ -c -o $@
+	@echo "Compiling $<"
+	@g++ -c $< -o $@ -lpthread 
 
-frontserver: frontserver.o
-	g++ $^ -lpthread -o $@
-
-frontserverV1: frontserverV1.o
-	g++ $^ -lpthread -o $@
+# Clean the built files
+clean:
+	@echo "Cleaning..."
+	@rm -f $(TARGET) $(OBJECTS)
