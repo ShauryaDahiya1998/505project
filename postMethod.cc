@@ -33,9 +33,15 @@ string postMethodhandler(string command, string body) {
 
         // check if the email and password are correct
         if (checkValidUser(email, password)) {
-            // if correct, create a session and return the session id
-            string sessionID = createSession(email);
-            return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>SessionID: " + sessionID + "</h1>";
+          // if correct, create a session and return the session id
+          string sessionID = createSession(email);
+          string message = "{\"message\": \"Session Created\", \"sessionID\": \"" + sessionID + "\"}";
+          string createResponseForPostRequest = "HTTP/1.1 200 OK\r\n"
+                      "Content-Type: application/json\r\n"
+                      "Content-Length: " + std::to_string(message.size()) + "\r\n"
+                      "Set-Cookie: sessionID=" + sessionID + "\r\n\r\n" +
+                      "{\"message\": \"Session Created\", \"sessionID\": \"" + sessionID + "\"}";
+            return createResponseForPostRequest;                                                    
         } else {
             return "HTTP/1.1 401 Unauthorized\nContent-Type: text/html\n\n<h1>Unauthorized</h1>";
         }
