@@ -209,7 +209,7 @@ void *worker(void *arg) {
     }
 
     //If the data is received successfully, add to tempcommand and process the command
-    tmpcommand += buffer;
+    tmpcommand = buffer;
     string content = "";
     cout<<tmpcommand<<endl;
     // check the type of the method, it is till the first space. Could be GET, POST, PUT, DELETE, HEAD
@@ -238,7 +238,7 @@ void *worker(void *arg) {
     
     // string content = "Hello from the C++ server using pthread";
     // string httpResponse = "HTTP/1.1 200 OK\r\nDate: Fri, 31 Dec 1999 23:59:59 GMT\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(content.length()) + "\r\n\r\n" + content;//Hello from the C++ server using pthread!";
-    cout<<content<<endl;
+    //cout<<content<<endl;
     send(fd, content.c_str(), content.length(),0);
     tmpcommand = "";
   
