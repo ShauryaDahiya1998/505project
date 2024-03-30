@@ -2,7 +2,15 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include "gen-cpp/StorageOps.h"
 
+using namespace apache::thrift;
+using namespace apache::thrift::protocol;
+using namespace apache::thrift::transport;
+using namespace storage;
 using namespace std;
 
 bool checkValidUser(string email, string password) {
@@ -19,6 +27,14 @@ string createSession(string email) {
 }
 
 string postMethodhandler(string command, string body) {
+
+
+    shared_ptr<TTransport> socket(new TSocket("127.0.0.1", 8000));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    StorageOpsClient client(protocol);
+
+    transport->open();
     // find the first /
     size_t firstSlash = command.find("/");
     // find the first space after firstSlash index and keep the result in a variable
@@ -49,6 +65,7 @@ string postMethodhandler(string command, string body) {
           UserSession session;
           session.setSession(email, email, email, email, "6000");
           sessions[sessionID] = session;
+          client.put(email, "password", password);
           return createResponseForPostRequest;                                                    
         } else {
             return "HTTP/1.1 401 Unauthorized\nContent-Type: text/html\n\n<h1>Unauthorized</h1>";
