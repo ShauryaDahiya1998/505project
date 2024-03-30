@@ -1,6 +1,7 @@
 #include "customlib.h"
 #include <string>
 #include <iostream>
+#include <random>
 
 using namespace std;
 
@@ -11,7 +12,10 @@ bool checkValidUser(string email, string password) {
 
 string createSession(string email) {
     // create a session and return the session id
-    return "5555";
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(1000000, 9999999);
+    return to_string(dis(gen));
 }
 
 string postMethodhandler(string command, string body) {
@@ -20,7 +24,7 @@ string postMethodhandler(string command, string body) {
     // find the first space after firstSlash index and keep the result in a variable
     command = command.substr(firstSlash);
     command = command.substr(0, command.find(" "));
-
+    HttpResponseCreator response;
     // handle the commandType and return the appropriate response
     if (command == "/login") {
         // here we get a email and password from the body in the format {email:"email", password:"password"}
@@ -36,12 +40,16 @@ string postMethodhandler(string command, string body) {
           // if correct, create a session and return the session id
           string sessionID = createSession(email);
           string message = "{\"message\": \"Session Created\", \"sessionID\": \"" + sessionID + "\"}";
-          string createResponseForPostRequest = "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: application/json\r\n"
-                      "Content-Length: " + std::to_string(message.size()) + "\r\n"
-                      "Set-Cookie: sessionID=" + sessionID + "\r\n\r\n" +
-                      "{\"message\": \"Session Created\", \"sessionID\": \"" + sessionID + "\"}";
-            return createResponseForPostRequest;                                                    
+          response.content_type = "application/json";
+          response.message = message;
+          response.sessionID = sessionID;
+          string createResponseForPostRequest = response.createPostResponse(response);
+
+          // set cookie in the cookie map
+          UserSession session;
+          session.setSession(email, email, email, email, "6000");
+          sessions[sessionID] = session;
+          return createResponseForPostRequest;                                                    
         } else {
             return "HTTP/1.1 401 Unauthorized\nContent-Type: text/html\n\n<h1>Unauthorized</h1>";
         }

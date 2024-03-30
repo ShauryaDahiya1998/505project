@@ -1,6 +1,6 @@
 TARGET = myserver
 # Define source files
-SOURCES = getMethod.cc postMethod.cc frontserverV1.cc
+SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc
 # Automatically generate a list of object files
 OBJECTS = $(SOURCES:.cc=.o)
 # Default target
