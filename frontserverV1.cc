@@ -23,8 +23,17 @@
 #include <stdlib.h>
 #include <memory>
 #include "customlib.h"
+#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include "gen-cpp/StorageOps.h"
 
+using namespace apache::thrift;
+using namespace apache::thrift::protocol;
+using namespace apache::thrift::transport;
+using namespace storage;
 using namespace std;
+
 
 
 #define PORT 8080
@@ -188,7 +197,13 @@ void *worker(void *arg) {
   string command = "";
 
   //Flag to check if the client has quit
-  int clientQuit = 0; 
+  int clientQuit = 0;
+  shared_ptr<TTransport> socket(new TSocket("127.0.0.1", 8000));
+  shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+  shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+  StorageOpsClient client(protocol);
+  transport->open();
+
   while (true) {
     //Clear the buffer
     memset(buffer, 0, sizeof(buffer));
@@ -219,12 +234,12 @@ void *worker(void *arg) {
       size_t pos = tmpcommand.find(" ");
       string method = tmpcommand.substr(0, pos);
       if (method == "GET") {
-        content = getMethodHandler(tmpcommand);
+        content = getMethodHandler(tmpcommand, client);
       } else if (method == "POST") {
         // separate the body of post method from rest of the command
         size_t pos = tmpcommand.find("\r\n\r\n");
         string body = tmpcommand.substr(pos + 4);
-        content = postMethodhandler(tmpcommand, body);
+        content = postMethodhandler(tmpcommand, body, client);
       } else if (method == "PUT") {
         content = "PUT method";
       } else if (method == "DELETE") {
@@ -281,7 +296,7 @@ void *worker(void *arg) {
   }
   //Close the connection and delete the arguments. This is a critical section, so lock the mutex
   mtx.lock();
-  
+  transport->close();
   //Print the debug message if the debug flag is set
   if (debugFlag == 1) {
     cerr << "[" << fd<<"] Connection closed\r\n";

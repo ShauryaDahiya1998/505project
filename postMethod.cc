@@ -2,24 +2,50 @@
 #include <string>
 #include <iostream>
 #include <random>
-#include <thrift/transport/TSocket.h>
-#include <thrift/transport/TBufferTransports.h>
-#include <thrift/protocol/TBinaryProtocol.h>
 #include "gen-cpp/StorageOps.h"
-
-using namespace apache::thrift;
-using namespace apache::thrift::protocol;
-using namespace apache::thrift::transport;
 using namespace storage;
 using namespace std;
 
-bool checkValidUser(string email, string password) {
-    // check if the email and password are correct
-    return true;
+map<string, string> parseJsonLikeString(const string& jsonString) {
+    map<string, string> result;
+    size_t pos = 0;
+    size_t end;
+
+    while ((pos = jsonString.find('"', pos)) != string::npos) {
+        end = jsonString.find('"', pos + 1);
+        string key = jsonString.substr(pos + 1, end - pos - 1);
+
+        // Start searching for the next quote after the colon following the key
+        pos = jsonString.find(':', end) + 1;
+        // Skip any whitespace or other characters (like quotes) before the value
+        while (jsonString[pos] == ' ' || jsonString[pos] == '\"') {
+            pos++;
+        }
+        end = jsonString.find('"', pos + 1);
+        string value = jsonString.substr(pos, end - pos);
+
+        result[key] = value;
+
+        // Ensure the next search starts after the closing quote of the current value
+        pos = end + 1;
+    }
+
+    return result;
 }
 
-bool checkNewUser(string email) {
-    // check if the email is already registered
+bool checkValidUser(string email, string password, StorageOpsClient client) {
+    // check if the email and password are correct
+    string response;
+    client.get(response, email, "password");
+    //If response starts with -ERR then return false
+    cout<<"Response: "<<response<<endl;
+    if(response.find("-ERR") != string::npos) {
+        return false;
+    }
+    else if (response != password) {
+        return false;
+    }
+
     return true;
 }
 
@@ -31,15 +57,7 @@ string createSession(string email) {
     return to_string(dis(gen));
 }
 
-string postMethodhandler(string command, string body) {
-
-
-    shared_ptr<TTransport> socket(new TSocket("127.0.0.1", 8000));
-    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-    StorageOpsClient client(protocol);
-
-    transport->open();
+string postMethodhandler(string command, string body, StorageOpsClient client) {
     // find the first /
     size_t firstSlash = command.find("/");
     // find the first space after firstSlash index and keep the result in a variable
@@ -51,16 +69,20 @@ string postMethodhandler(string command, string body) {
         // here we get a email and password from the body in the format {email:"email", password:"password"}
         // parse this and get the email and passowrd
 
-        size_t emailStart = body.find("email\":") + 8;
-        string email = body.substr(emailStart, body.find("\",") - emailStart);
-        size_t passwordStart = body.find("password\":") + 11;
-        string password = body.substr(passwordStart, body.find("\"}") - passwordStart);
+        // size_t emailStart = body.find("email\":") + 8;
+        // string email = body.substr(emailStart, body.find("\",") - emailStart);
+        // size_t passwordStart = body.find("password\":") + 11;
+        // string password = body.substr(passwordStart, body.find("\"}") - passwordStart);
+        auto parsed = parseJsonLikeString(body);
+        string email = parsed["email"];
+        string password = parsed["password"];
+        cout<<"Details: "<<email<<" "<<password<<endl;  
 
         // check if the email and password are correct
-        if (checkValidUser(email, password)) {
+        if (checkValidUser(email, password, client)) {
           // if correct, create a session and return the session id
           string sessionID = createSession(email);
-          string message = "{\"message\": \"Session Created\", \"sessionID\": \"" + sessionID + "\"}";
+          string message = "{\"message\": \"Login Successful\", \"sessionID\": \"" + sessionID + "\"}";
           response.content_type = "application/json";
           response.message = message;
           response.sessionID = sessionID;
@@ -70,37 +92,57 @@ string postMethodhandler(string command, string body) {
           UserSession session;
           session.setSession(email, email, email, email, "6000");
           sessions[sessionID] = session;
-          client.put(email, "password", password);
+          
           return createResponseForPostRequest;                                                    
         } else {
-            return "HTTP/1.1 401 Unauthorized\nContent-Type: text/html\n\n<h1>Unauthorized</h1>";
+            string message = "{\"message\": \"Invalid Login Credentials\"}";
+            response.content_type = "application/json";
+            response.message = message;
+            response.sessionID = "1111";   //what should we pass for default session ID??????
+            string createResponseForPostRequest = response.createPostResponse(response);
+            return createResponseForPostRequest;
         }
-        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>POST Method</h1>";
+
     } else if (command == "/signup") {
         // here we get a username, email and password from the body in the format {"username":"hi","email":"hi","password":"hi"}
         // parse this and get the username, email and passowrd
-
-        size_t usernameStart = body.find("username\":") + 11;
-        string username = body.substr(usernameStart, body.find("\",") - usernameStart);
-        size_t emailStart = body.find("email\":") + 8;
-        string email = body.substr(emailStart, body.find("\",") - emailStart);
-        size_t passwordStart = body.find("password\":") + 11;
-        string password = body.substr(passwordStart, body.find("\"}") - passwordStart);
-
+        // size_t pos = 0;
+        // size_t end;
+        // pos = body.find('"', pos);
+        // end = body.find("}");
+        // size_t usernameStart = body.find("username\":") + 11;
+        // string username = body.substr(usernameStart, body.find("\",") - usernameStart);
+        // size_t emailStart = body.find("email\":") + 8;
+        // body = body.substr(emailStart);
+        // pos = body.find(':"', pos);
+        // end = body.find("\",", pos+2);
+        // string email = body.substr(pos+2, end - pos-2);
+        // size_t passwordStart = body.find("password\":") + 11;
+        // body = body.substr(passwordStart);
+        // pos = body.find(':"', pos);
+        // end = body.find("\"}", pos+2);
+        auto parsed = parseJsonLikeString(body);
+        string username = parsed["username"];
+        string email = parsed["email"];
+        string password = parsed["password"];
+        cout<<"Details: "<<username<<" "<<email<<" "<<password<<endl;
         // check if the email is already registered
-        if (checkNewUser(email)) {
+        if (!checkValidUser(email, password, client)) {
             // if not registered, create a new user and return the success message
+            client.put(email, "password", password);
             string message = "{\"message\": \"Account Created\"}";
-            string createResponseForPostRequest = "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: application/json\r\n"
-                      "Content-Length: " + std::to_string(message.size()) + "\r\n\r\n" + message;
-            return createResponseForPostRequest;    
+            response.content_type = "application/json";
+            response.message = message;
+            response.sessionID = "1111";   //what should we pass for default session ID??????
+            string createResponseForPostRequest = response.createPostResponse(response);
+            return createResponseForPostRequest;   
             
         } else {
            string message = "{\"message\": \"Account already exists\"}";
-            string createResponseForPostRequest = "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: application/json\r\n"
-                      "Content-Length: " + std::to_string(message.size()) + "\r\n\r\n" + message;
+            response.content_type = "application/json";
+            response.message = message;
+            response.sessionID = "1111";   //what should we pass for default session ID??????
+            string createResponseForPostRequest = response.createPostResponse(response);
             return createResponseForPostRequest;   
         }
 

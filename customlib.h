@@ -2,12 +2,14 @@
 #define CUSTOMLIB_H
 #include <string>
 #include <map>
+#include "gen-cpp/StorageOps.h"
+using namespace storage;
 using namespace std;
 // Function declaration
 
 // Handler to return the get method commands
-std::string getMethodHandler(std::string command);
-std::string postMethodhandler(std::string command, std::string body);
+std::string getMethodHandler(std::string command, StorageOpsClient client);
+std::string postMethodhandler(std::string command, std::string body, StorageOpsClient client);
 
 class UserSession {
   public:

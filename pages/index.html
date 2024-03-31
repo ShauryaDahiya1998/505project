@@ -291,39 +291,6 @@ function loadSignupForm() {
     <button class="toggle-form" onclick="loadLoginForm()">Login</button>
   `;
 }
-
-function login() {
-  // Your existing login function
-  var email = document.getElementById('email').value;
-  var password = document.getElementById('password').value;
-
-  // Add logic to handle login
-  if (email === '' || password === '') {
-    alert('Please enter both email and password');
-  } else {
-    // Define the payload
-    const data = { email: email, password: password };
-
-    // Use fetch API to send the request
-    fetch('http://localhost:8080/login', {
-      method: 'POST', // or 'PUT'
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    .then(response => response.json()) // Assuming the server responds with JSON
-    .then(data => {
-      console.log('Success:', data); // Process success response
-      // You can redirect the user or perform other actions based on the response
-      // For example, if you receive a token, you might want to store it for future requests
-    })
-    .catch((error) => {
-      console.error('Error:', error); // Handle any errors
-    });
-  }
-  
-}
 function showPopup(message, clearFields, success) {
   const popup = document.createElement('div');
   popup.innerHTML = `
@@ -343,11 +310,63 @@ function showPopup(message, clearFields, success) {
       document.getElementById('email').value = '';
       document.getElementById('password').value = '';
     }
-    if (success) {
+    if (success === "Signup Successful") {
       loadLoginForm();
     }
   }
 }
+
+function login() {
+  // Your existing login function
+  var email = document.getElementById('email').value;
+  var password = document.getElementById('password').value;
+
+  // Add logic to handle login
+  if (email === '' || password === '') {
+    alert('Please enter both email and password');
+  } else {
+    // Define the payload
+    const data = { email: email, password: password };
+
+    fetch('http://localhost:8080/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.message === "Invalid Login Credentials") {
+        username.value = '';
+        email.value = '';
+        password.value = '';
+        // Show popup for already existing user without redirecting
+        showPopup("Invalid Login Credentials. Email or Password may be incorrect", true, "Login Failed");
+      } else {
+        // Show popup for successful account creation and redirect to login
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing', {
+          method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Success:', data);
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+      }
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      showPopup('An error occurred. Please try again.', false, "Error Occurred");
+    });
+  }
+  
+}
+
 function signup() {
   var username = document.getElementById('username').value;
   var email = document.getElementById('email').value;
@@ -372,15 +391,15 @@ function signup() {
         email.value = '';
         password.value = '';
         // Show popup for already existing user without redirecting
-        showPopup("An account with this email already exists.", true, false);
+        showPopup("An account with this email already exists.", true, "Signup Failed");
       } else {
         // Show popup for successful account creation and redirect to login
-        showPopup('Successfully created account', false, true);
+        showPopup('Successfully created account', false, "Signup Successful");
       }
     })
     .catch((error) => {
       console.error('Error:', error);
-      showPopup('An error occurred. Please try again.', false, false);
+      showPopup('An error occurred. Please try again.', false, "Error Occurred");
     });
   }
 }
