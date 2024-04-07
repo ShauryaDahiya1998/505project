@@ -1,3 +1,0 @@
-PUT 3421126 1 abhi1,abhi1,abhi1,6000
-PUT 3648733 1 abhi1,abhi1,abhi1,6000
-DELETE 3648733 1

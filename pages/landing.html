@@ -84,8 +84,9 @@
                 <li><a href="#">About</a></li>
                 <li><a href="#">Services</a></li>
                 <li><a href="#">Support</a></li>
-                <li><a href="#">Login</a></li>
+                <li><button id="logoutButton">Logout</button></li>
             </ul>
+            
         </nav>
     </header>
 
@@ -118,5 +119,34 @@
             <!-- Social media icons go here -->
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.history.pushState({ page: "landing" }, "landing", "/landing");
+            console.log(window.location.pathname);   
+            
+            document.getElementById('logoutButton').addEventListener('click', function() {
+            logout();
+            }); 
+          });
+
+          function logout() {
+            fetch('http://localhost:8080/logout', {
+                method: 'GET',
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Redirect to login page or any other page
+                    window.location.href = '/login';
+                } else {
+                    throw new Error('Logout failed');
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+            }
+
+        </script>
 </body>
 </html>

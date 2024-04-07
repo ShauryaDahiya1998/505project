@@ -18,6 +18,18 @@ string sendToLandingPage(StorageOpsClient client, string sessionId) {
     string createResponseForPostRequest = response.createGetResponse(response);
     return createResponseForPostRequest;
 }
+
+string sendToLoginPage(StorageOpsClient client) {
+    ifstream ifs("./pages/index.html");
+    string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+    HttpResponseCreator response;
+    response.content_type = "text/html";
+    response.message = homepage;
+    response.sessionID = "";
+    string createResponseForPostRequest = response.createGetResponse(response);
+    return createResponseForPostRequest;
+}
+
 string getMethodHandler(string command, StorageOpsClient client) {
     string req = command;
     // find the first /
@@ -28,7 +40,7 @@ string getMethodHandler(string command, StorageOpsClient client) {
     HttpResponseCreator response;
     // handle the commandType and return the appropriate response
 
-    if (command == "/" || command == "/signup" || command == "/login") {
+    if (command == "/" || command == "/login") {
         //check if the cookie that we got in sessionID exists in cookie map, if yes send hey
         cout<<req<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");
@@ -41,21 +53,17 @@ string getMethodHandler(string command, StorageOpsClient client) {
                 return sendToLandingPage(client, sessionID);
             }
         } 
-        ifstream ifs("./pages/index.html");
-        string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-        response.content_type = "text/html";
-        response.message = homepage;
-        string createResponseForPostRequest = response.createGetResponse(response);
-        return createResponseForPostRequest;
+        return sendToLoginPage(client);
+        // ifstream ifs("./pages/index.html");
+        // string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+        // response.content_type = "text/html";
+        // response.message = homepage;
+        // string createResponseForPostRequest = response.createGetResponse(response);
+        // return createResponseForPostRequest;
     } 
-    // else if (command == "/login") {
-    //     ifstream ifs("./pages/index.html");
-    //     string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-    //     string httpResponseHeader = "HTTP/1.1 200 OK\r\n"
-    //                                "Content-Type: text/html\r\n"
-    //                                "Content-Length: " + std::to_string(homepage.size()) + "\r\n\r\n";
-    //     return httpResponseHeader + homepage;
-    // } 
+    else if (command == "/signup") {
+        return sendToLoginPage(client);
+    } 
     else if (command == "/landing") {
         string sessionId ="";
         return sendToLandingPage(client, sessionId);
@@ -68,11 +76,14 @@ string getMethodHandler(string command, StorageOpsClient client) {
     } else if(command == "/logout") {
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionID = req.substr(cookieIndex + 18, 7);
-        response.content_type = "text/html";
-        response.message = "Logged out successfully";
+        // response.content_type = "text/html";
+        // response.message = "Logged out successfully";
         client.deleteCell(sessionID, "1");
-        string createResponseForPostRequest = response.createGetResponse(response);
-        return createResponseForPostRequest;
+        string hel = sendToLoginPage(client);
+        cout<<hel<<endl;
+        return hel;
+        // string createResponseForPostRequest = response.createGetResponse(response);
+        // return createResponseForPostRequest;
     }
 
     else {
