@@ -23,12 +23,14 @@ string getMethodHandler(string command, StorageOpsClient client) {
         int cookieIndex = req.find("Cookie: sessionID=");
         if (cookieIndex != -1) {
             string sessionID = req.substr(cookieIndex + 18, 7);
-            if (sessions.find(sessionID) != sessions.end()) {
+            string sessionResp;
+            client.get(sessionResp, sessionID, "1");
+            if (sessionResp.find("-ERR") == string::npos){
                 cout<<"Session Found"<<endl;
-                string msg = "<h1>Hey " + sessions[sessionID].username + "</h1>";
+                string msg = "<h1>Hey " + sessionResp + "</h1>";
                 response.content_type = "text/html";
                 response.message = msg;
-                response.sessionID = "1111";   //How to get session ID here??????
+                response.sessionID = sessionID;   //How to get session ID here??????
                 string createResponseForPostRequest = response.createGetResponse(response);
                 return createResponseForPostRequest;
                 

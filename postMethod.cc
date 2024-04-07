@@ -49,11 +49,21 @@ bool checkValidUser(string username, string password, StorageOpsClient client) {
     return true;
 }
 
-string createSession(string username) {
+string createSession(string username, StorageOpsClient client) {
     // create a session and return the session id
     random_device rd;
     mt19937 gen(rd());
+    // keep creating random session id until we get a unique one
     uniform_int_distribution<> dis(1000000, 9999999);
+    string sessionID = to_string(dis(gen));
+    while(1) {
+      string resp;
+      client.get(resp, sessionID, "1");
+      if (resp.find("-ERR") != string::npos) {
+        break;
+      }
+      sessionID = to_string(dis(gen));
+    }
     return to_string(dis(gen));
 }
 
@@ -81,7 +91,8 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
         // check if the email and password are correct
         if (checkValidUser(username, password, client)) {
           // if correct, create a session and return the session id
-          string sessionID = createSession(username);
+        //   cout<<client.get(email, password)<<endl; 
+          string sessionID = createSession(username, client);
           string message = "{\"message\": \"Login Successful\", \"sessionID\": \"" + sessionID + "\"}";
           response.content_type = "application/json";
           response.message = message;
@@ -89,9 +100,7 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
           string createResponseForPostRequest = response.createPostResponse(response);
 
           // set cookie in the cookie map
-          UserSession session;
-          session.setSession(username, username, username, username, "6000");
-          sessions[sessionID] = session;
+          setSession(username, username, username, "6000", sessionID, client);
           
           return createResponseForPostRequest;                                                    
         } else {

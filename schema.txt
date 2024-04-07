@@ -1,3 +1,1 @@
-row: email-Id
-col: user
-col: password
+login: <row: username, col1: user, col2: password>

@@ -2,8 +2,6 @@
 
 using namespace std;
 
-map<string, UserSession> sessions;
-
 string HttpResponseCreator::createPostResponse(HttpResponseCreator response) {
     string createResponseForPostRequest = "HTTP/1.1 200 OK\r\n"
                 "Content-Type: " + response.content_type + "\r\n"
@@ -21,10 +19,8 @@ string HttpResponseCreator::createGetResponse(HttpResponseCreator response) {
     return createResponseForPostRequest;
 }
 
-void UserSession::setSession(string username, string email, string data, string mdata, string expirationTime) {
-    this->username = username;
-    this->email = email;
-    this->data = data;
-    this->mdata = mdata;
-    this->expirationTime = expirationTime;
+void setSession(string username, string data, string mdata, string expirationTime, string sessionID, StorageOpsClient client) {
+    string putValue = "";
+    putValue += username + "," + "," + data + "," + mdata + "," + expirationTime;
+    client.put(putValue, sessionID, "1");
 }
