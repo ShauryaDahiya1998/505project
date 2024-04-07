@@ -100,6 +100,7 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
           string createResponseForPostRequest = response.createPostResponse(response);
 
           // set cookie in the cookie map
+          // TODO: Move inside createSession
           setSession(username, username, username, "6000", sessionID, client);
           
           return createResponseForPostRequest;                                                    
@@ -107,7 +108,6 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
             string message = "{\"message\": \"Invalid Login Credentials\"}";
             response.content_type = "application/json";
             response.message = message;
-            response.sessionID = "1111";   //what should we pass for default session ID??????
             string createResponseForPostRequest = response.createPostResponse(response);
             return createResponseForPostRequest;
         }
@@ -142,7 +142,6 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
             string message = "{\"message\": \"Account Created\"}";
             response.content_type = "application/json";
             response.message = message;
-            response.sessionID = "1111";   //what should we pass for default session ID??????
             string createResponseForPostRequest = response.createPostResponse(response);
             return createResponseForPostRequest;   
             
@@ -150,7 +149,6 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
            string message = "{\"message\": \"Account already exists\"}";
             response.content_type = "application/json";
             response.message = message;
-            response.sessionID = "1111";   //what should we pass for default session ID??????
             string createResponseForPostRequest = response.createPostResponse(response);
             return createResponseForPostRequest;   
         }

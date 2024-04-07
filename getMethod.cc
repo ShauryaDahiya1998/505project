@@ -6,7 +6,18 @@
 using namespace storage;
 using namespace std;
 
-
+string sendToLandingPage(StorageOpsClient client, string sessionId) {
+    ifstream ifs("./pages/landing.html");
+    string landingPage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+    HttpResponseCreator response;
+    response.content_type = "text/html";
+    response.message = landingPage;
+    if (sessionId != "") {
+        response.sessionID = sessionId;
+    }
+    string createResponseForPostRequest = response.createGetResponse(response);
+    return createResponseForPostRequest;
+}
 string getMethodHandler(string command, StorageOpsClient client) {
     string req = command;
     // find the first /
@@ -25,26 +36,15 @@ string getMethodHandler(string command, StorageOpsClient client) {
             string sessionID = req.substr(cookieIndex + 18, 7);
             string sessionResp;
             client.get(sessionResp, sessionID, "1");
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
             if (sessionResp.find("-ERR") == string::npos){
-                cout<<"Session Found"<<endl;
-                string msg = "<h1>Hey " + sessionResp + "</h1>";
-                response.content_type = "text/html";
-                response.message = msg;
-                response.sessionID = sessionID;   //How to get session ID here??????
-                string createResponseForPostRequest = response.createGetResponse(response);
-                return createResponseForPostRequest;
-                
-                // string httpResponseHeader = "HTTP/1.1 200 OK\r\n"
-                //                    "Content-Type: text/html\r\n"
-                //                    "Content-Length: " + to_string(msg.size()) + "\r\n\r\n";
-                // return httpResponseHeader + msg;
+                return sendToLandingPage(client, sessionID);
             }
         } 
         ifstream ifs("./pages/index.html");
         string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
         response.content_type = "text/html";
         response.message = homepage;
-        response.sessionID = "1111";   //How to get session ID here??????
         string createResponseForPostRequest = response.createGetResponse(response);
         return createResponseForPostRequest;
     } 
@@ -57,20 +57,22 @@ string getMethodHandler(string command, StorageOpsClient client) {
     //     return httpResponseHeader + homepage;
     // } 
     else if (command == "/landing") {
-        ifstream ifs("./pages/landing.html");
-        string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-        response.content_type = "text/html";
-        response.message = homepage;
-        response.sessionID = "1111";   //How to get session ID here??????
-        string createResponseForPostRequest = response.createGetResponse(response);
-        return createResponseForPostRequest;
-
+        string sessionId ="";
+        return sendToLandingPage(client, sessionId);
     } else if (command == "/inbox") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Inbox Us</h1>";
     } else if (command == "/downloadFile") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>downloadFile</h1>";
     } else if (command == "/listFile") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>listFile</h1>";
+    } else if(command == "/logout") {
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionID = req.substr(cookieIndex + 18, 7);
+        response.content_type = "text/html";
+        response.message = "Logged out successfully";
+        client.deleteCell(sessionID, "1");
+        string createResponseForPostRequest = response.createGetResponse(response);
+        return createResponseForPostRequest;
     }
 
     else {

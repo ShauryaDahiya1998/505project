@@ -21,6 +21,13 @@ class HttpResponseCreator {
     string sessionID;
     string createPostResponse(HttpResponseCreator response);
     string createGetResponse(HttpResponseCreator response);
+    HttpResponseCreator() {
+      content_type = "";
+      methodType = "";
+      message = "";
+      status = "";
+      sessionID = "";
+    }
 };
 
 #endif // CUSTOMLIB_H
