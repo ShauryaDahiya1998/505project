@@ -49,11 +49,21 @@ bool checkValidUser(string email, string password, StorageOpsClient client) {
     return true;
 }
 
-string createSession(string email) {
+string createSession(string email, StorageOpsClient client) {
     // create a session and return the session id
     random_device rd;
     mt19937 gen(rd());
+    // keep creating random session id until we get a unique one
     uniform_int_distribution<> dis(1000000, 9999999);
+    string sessionID = to_string(dis(gen));
+    while(1) {
+      string resp;
+      client.get(resp, sessionID, "1");
+      if (resp.find("-ERR") != string::npos) {
+        break;
+      }
+      sessionID = to_string(dis(gen));
+    }
     return to_string(dis(gen));
 }
 
@@ -77,11 +87,11 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
         string email = parsed["email"];
         string password = parsed["password"];
         cout<<"Details: "<<email<<" "<<password<<endl;  
-
         // check if the email and password are correct
         if (checkValidUser(email, password, client)) {
           // if correct, create a session and return the session id
-          string sessionID = createSession(email);
+        //   cout<<client.get(email, password)<<endl; 
+          string sessionID = createSession(email, client);
           string message = "{\"message\": \"Login Successful\", \"sessionID\": \"" + sessionID + "\"}";
           response.content_type = "application/json";
           response.message = message;
@@ -89,9 +99,7 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
           string createResponseForPostRequest = response.createPostResponse(response);
 
           // set cookie in the cookie map
-          UserSession session;
-          session.setSession(email, email, email, email, "6000");
-          sessions[sessionID] = session;
+          setSession(email, email, email, "6000", sessionID, client);
           
           return createResponseForPostRequest;                                                    
         } else {
