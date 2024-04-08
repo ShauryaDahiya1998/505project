@@ -2,9 +2,41 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <openssl/sha.h>
+#include <sstream>
+#include <iomanip>
+#include <chrono>
+
+
 #include "gen-cpp/StorageOps.h"
 using namespace storage;
 using namespace std;
+
+std::vector<std::string> splitStrings(std::string input, std::string delimiter) {
+    std::vector<std::string> result;
+    size_t start = 0;
+    size_t end = input.find(delimiter);
+
+    while (end != std::string::npos) {
+        result.push_back(input.substr(start, end - start));
+        start = end + delimiter.length();
+        end = input.find(delimiter, start);
+    }
+
+    result.push_back(input.substr(start));
+
+    return result;
+}
+
+std::string vectorToString( std::vector<string> vec, std::string separator) {
+    std::stringstream ss;
+    for(size_t i = 0; i < vec.size(); ++i) {
+        if(i != 0)
+            ss << separator;
+        ss << vec[i]; // Directly works for string, use std::to_string for other types
+    }
+    return ss.str();
+}
 
 map<string, string> parseJsonLikeString(const string& jsonString) {
     map<string, string> result;
@@ -49,12 +81,85 @@ bool checkValidUser(string email, string password, StorageOpsClient client) {
     return true;
 }
 
+std::string unescape(const std::string& input) {
+    std::string output;
+    output.reserve(input.length()); // Optimize memory allocation
+
+    for (std::size_t i = 0; i < input.length(); ++i) {
+        if (input[i] == '\\' && i + 1 < input.length()) {
+            // Handle common escape sequences
+            switch (input[i + 1]) {
+                case 'n': output += '\n'; ++i; break; // New line
+                case 't': output += '\t'; ++i; break; // Tab
+                case '\\': output += '\\'; ++i; break; // Backslash
+                case '"': output += '"'; ++i; break; // Double quote
+                case 'r': output += '\r'; ++i; break; // Carriage return
+                // Add more cases as needed
+                default: output += input[i]; break; // Not an escape sequence
+            }
+        } else {
+            output += input[i];
+        }
+    }
+
+    return output;
+}
+
+
+
 string createSession(string email) {
     // create a session and return the session id
     random_device rd;
     mt19937 gen(rd());
     uniform_int_distribution<> dis(1000000, 9999999);
     return to_string(dis(gen));
+}
+
+std::string getUsernameFromEmail(const std::string& email) {
+    size_t atPos = email.find('@');
+    
+    if (atPos != std::string::npos) {
+        return email.substr(0, atPos);
+    }
+  
+    return "";
+}
+
+std::string getDomainFromEmail(std::string email) {
+    size_t atPosition = email.find('@');
+    if (atPosition != std::string::npos) {
+        return email.substr(atPosition + 1); // Return the substring after '@'
+    }
+    return ""; // Return an empty string if '@' is not found
+}
+
+std::string getCurrentTimestamp() {
+    // Get current time
+    auto now = std::chrono::system_clock::now();
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+    
+    // Convert to local time
+    std::tm localTime;
+    localtime_r(&now_c, &localTime); // POSIX thread-safe
+    
+    // Format as string
+    std::stringstream ss;
+    ss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
+
+std::string sha256(string input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, input.c_str(), input.size());
+    SHA256_Final(hash, &sha256);
+
+    std::stringstream ss;
+    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
 }
 
 string postMethodhandler(string command, string body, StorageOpsClient client) {
@@ -163,6 +268,65 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>moveFile</h1>";
     } else if (command == "/moveFolder") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>moveFolder</h1>";
+    }
+    else if (command == "/sendEmail") {
+
+        auto parsed = parseJsonLikeString(body);
+        string toEmail = parsed["email"];
+        string subject = parsed["subject"];
+        string body = unescape(parsed["body"]);
+
+        string username = getUsernameFromEmail(toEmail);
+        string domain = getDomainFromEmail(toEmail);
+        if(domain!="penncloud"){
+            string email =  "Subject: " + subject + "\n" +  body; 
+
+            int success = smtpClient(parsed,domain,email);
+            return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>sendEmail</h1>";
+        }
+        else{
+            string row = username + "-mailbox";
+            string timestamp = getCurrentTimestamp();
+            string dummyFrom = "sukriti@penncloud"; //TODO
+            string email = dummyFrom + "\r\n" + timestamp + "\r\n" + subject + "\r\n" +  body; 
+            string col = sha256(email);
+            std::cout << email << endl;
+            client.put(row,col,email);
+
+            string emailHashes;
+            client.get(emailHashes,row,"AllEmails");
+            if(emailHashes.empty() || emailHashes[0]=='-')
+                emailHashes = col;
+            else
+                emailHashes = emailHashes + "," + col;
+            client.put(row,"AllEmails",emailHashes);
+
+            cout<<"Details: "<<toEmail<<" "<<subject<<" "<<body<<endl;
+            return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>sendEmail</h1>";
+        }
+    }
+    else if (command == "/deleteEmail") {
+        auto parsed = parseJsonLikeString(body);
+        string emailHash = parsed["emailHash"];
+
+        string username = "sukriti"; // TODO
+        string row = username + "-mailbox";
+        string emailHashes;
+        client.get(emailHashes,row,"AllEmails");
+        vector<string> emailHashSet = splitStrings(emailHashes,",");
+        vector<string> newEmailHashSet;
+        for(string hash : emailHashSet){
+            if(hash!=emailHash)
+                newEmailHashSet.push_back(hash);
+        }
+        string newEmailHashes = vectorToString(newEmailHashSet,",");
+        if(newEmailHashes.empty())
+            client.deleteCell(row,"AllEmails");
+        else
+            client.put(row,"AllEmails",newEmailHashes);
+        
+        client.deleteCell(row,emailHash);
+        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteEmail</h1>";
     }
     else {
         return "HTTP/1.1 404 Not Found\nContent-Type: text/html\n\n<h1>404 Not Found</h1>";

@@ -10,6 +10,7 @@ using namespace std;
 // Handler to return the get method commands
 std::string getMethodHandler(std::string command, StorageOpsClient client);
 std::string postMethodhandler(std::string command, std::string body, StorageOpsClient client);
+int smtpClient(map<string, string> json,std::string domain,std::string body);
 
 class UserSession {
   public:
