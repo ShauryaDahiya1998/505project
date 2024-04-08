@@ -158,7 +158,11 @@ string postMethodhandler(string command, string body, StorageOpsClient client) {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Contact Us</h1>";
     } else if (command == "/deleteFile") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFile</h1>";
-    } else if (command == "/createFolder") {
+    } else if (command == "/createFile") {
+        // TODO: parse data here in body
+        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>createFile</h1>";
+    } 
+    else if (command == "/createFolder") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>createFolder</h1>";
     } else if (command == "/deleteFolder") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFolder</h1>";
