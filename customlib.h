@@ -10,17 +10,7 @@ using namespace std;
 // Handler to return the get method commands
 std::string getMethodHandler(std::string command, StorageOpsClient client);
 std::string postMethodhandler(std::string command, std::string body, StorageOpsClient client);
-
-class UserSession {
-  public:
-    string username;
-    string email;
-    string data;
-    string mdata;
-    string expirationTime;
-    string sessionID;
-    void setSession(string username, string email, string data, string mdata, string expirationTime);
-};
+void setSession(string username, string data, string mdata, string expirationTime, string sessionID, StorageOpsClient client);
 
 class HttpResponseCreator {
   public:
@@ -31,8 +21,13 @@ class HttpResponseCreator {
     string sessionID;
     string createPostResponse(HttpResponseCreator response);
     string createGetResponse(HttpResponseCreator response);
+    HttpResponseCreator() {
+      content_type = "";
+      methodType = "";
+      message = "";
+      status = "";
+      sessionID = "";
+    }
 };
-
-extern map<string, UserSession> sessions;
 
 #endif // CUSTOMLIB_H

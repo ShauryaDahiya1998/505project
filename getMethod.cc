@@ -6,6 +6,29 @@
 using namespace storage;
 using namespace std;
 
+string sendToLandingPage(StorageOpsClient client, string sessionId) {
+    ifstream ifs("./pages/landing.html");
+    string landingPage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+    HttpResponseCreator response;
+    response.content_type = "text/html";
+    response.message = landingPage;
+    if (sessionId != "") {
+        response.sessionID = sessionId;
+    }
+    string createResponseForPostRequest = response.createGetResponse(response);
+    return createResponseForPostRequest;
+}
+
+string sendToLoginPage(StorageOpsClient client) {
+    ifstream ifs("./pages/index.html");
+    string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+    HttpResponseCreator response;
+    response.content_type = "text/html";
+    response.message = homepage;
+    response.sessionID = "";
+    string createResponseForPostRequest = response.createGetResponse(response);
+    return createResponseForPostRequest;
+}
 
 string getMethodHandler(string command, StorageOpsClient client) {
     string req = command;
@@ -17,58 +40,50 @@ string getMethodHandler(string command, StorageOpsClient client) {
     HttpResponseCreator response;
     // handle the commandType and return the appropriate response
 
-    if (command == "/" || command == "/signup" || command == "/login") {
+    if (command == "/" || command == "/login") {
         //check if the cookie that we got in sessionID exists in cookie map, if yes send hey
         cout<<req<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");
         if (cookieIndex != -1) {
             string sessionID = req.substr(cookieIndex + 18, 7);
-            if (sessions.find(sessionID) != sessions.end()) {
-                cout<<"Session Found"<<endl;
-                string msg = "<h1>Hey " + sessions[sessionID].username + "</h1>";
-                response.content_type = "text/html";
-                response.message = msg;
-                response.sessionID = "1111";   //How to get session ID here??????
-                string createResponseForPostRequest = response.createGetResponse(response);
-                return createResponseForPostRequest;
-                
-                // string httpResponseHeader = "HTTP/1.1 200 OK\r\n"
-                //                    "Content-Type: text/html\r\n"
-                //                    "Content-Length: " + to_string(msg.size()) + "\r\n\r\n";
-                // return httpResponseHeader + msg;
+            string sessionResp;
+            client.get(sessionResp, sessionID, "1");
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
+            if (sessionResp.find("-ERR") == string::npos){
+                return sendToLandingPage(client, sessionID);
             }
         } 
-        ifstream ifs("./pages/index.html");
-        string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-        response.content_type = "text/html";
-        response.message = homepage;
-        response.sessionID = "1111";   //How to get session ID here??????
-        string createResponseForPostRequest = response.createGetResponse(response);
-        return createResponseForPostRequest;
+        return sendToLoginPage(client);
+        // ifstream ifs("./pages/index.html");
+        // string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+        // response.content_type = "text/html";
+        // response.message = homepage;
+        // string createResponseForPostRequest = response.createGetResponse(response);
+        // return createResponseForPostRequest;
     } 
-    // else if (command == "/login") {
-    //     ifstream ifs("./pages/index.html");
-    //     string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-    //     string httpResponseHeader = "HTTP/1.1 200 OK\r\n"
-    //                                "Content-Type: text/html\r\n"
-    //                                "Content-Length: " + std::to_string(homepage.size()) + "\r\n\r\n";
-    //     return httpResponseHeader + homepage;
-    // } 
+    else if (command == "/signup") {
+        return sendToLoginPage(client);
+    } 
     else if (command == "/landing") {
-        ifstream ifs("./pages/landing.html");
-        string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-        response.content_type = "text/html";
-        response.message = homepage;
-        response.sessionID = "1111";   //How to get session ID here??????
-        string createResponseForPostRequest = response.createGetResponse(response);
-        return createResponseForPostRequest;
-
+        string sessionId ="";
+        return sendToLandingPage(client, sessionId);
     } else if (command == "/inbox") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Inbox Us</h1>";
     } else if (command == "/downloadFile") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>downloadFile</h1>";
     } else if (command == "/listFile") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>listFile</h1>";
+    } else if(command == "/logout") {
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionID = req.substr(cookieIndex + 18, 7);
+        // response.content_type = "text/html";
+        // response.message = "Logged out successfully";
+        client.deleteCell(sessionID, "1");
+        string hel = sendToLoginPage(client);
+        cout<<hel<<endl;
+        return hel;
+        // string createResponseForPostRequest = response.createGetResponse(response);
+        // return createResponseForPostRequest;
     }
 
     else {

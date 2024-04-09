@@ -73,6 +73,51 @@
             color: white;
             text-decoration: none;
         }
+
+        .drive-section {
+            display: none;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .drive-section .upload-area {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 2px dashed #007BFF;
+            color: #007BFF;
+            cursor: pointer;
+        }
+
+        .drive-section .file-list {
+            margin-top: 1rem;
+        }
+
+        .drive-section .file-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .drive-section .file-list li {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* Additional button style for Drive */
+        .nav-links li button, .nav-links li a {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .nav-links li button:hover, .nav-links li a:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -80,22 +125,24 @@
         <nav class="navbar">
             <div class="logo">PennCloud</div>
             <ul class="nav-links">
-                <li><a href="#">Home</a></li>
+                <li><a href="#" onclick="showHomePage()">Home</a></li>
+                <li><a href="#" onclick="showDrivePage()">Drive</a></li>
                 <li><a href="#">About</a></li>
                 <li><a href="#">Services</a></li>
                 <li><a href="#">Support</a></li>
-                <li><a href="#">Login</a></li>
+                <li><button id="logoutButton">Logout</button></li>
             </ul>
+            
         </nav>
     </header>
 
-    <section class="hero">
+    <section class="hero" id="hero-section">
         <h1>Welcome to PennCloud</h1>
         <p>Your Personal Cloud Space</p>
         <button>Get Started</button>
     </section>
 
-    <section class="services">
+    <section class="services" id="services-section">
         <div class="service webmail">
             <h2>Webmail Service</h2>
             <p>Stay connected anywhere, anytime with our reliable webmail service.</p>
@@ -105,6 +152,20 @@
             <h2>Web Storage Service</h2>
             <p>Secure and accessible storage at your fingertips.</p>
             <button>Learn More</button>
+        </div>
+    </section>
+
+    <section class="drive-section" id="drive-section">
+        <h2>My Drive</h2>
+        <div class="upload-area" onclick="triggerFileUpload()">
+            Click to upload files
+        </div>
+        <input type="file" id="file-upload" multiple style="display: none;" onchange="handleFilesUpload()">
+        <div class="file-list">
+            <h3>Uploaded Files:</h3>
+            <ul id="file-list-ul">
+                <!-- Uploaded files will be listed here -->
+            </ul>
         </div>
     </section>
 
@@ -118,5 +179,106 @@
             <!-- Social media icons go here -->
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.history.pushState({ page: "landing" }, "landing", "/landing");
+            console.log(window.location.pathname);   
+            
+            document.getElementById('logoutButton').addEventListener('click', function() {
+            logout();
+            }); 
+          });
+
+          function logout() {
+            fetch('http://localhost:8080/logout', {
+                method: 'GET',
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Redirect to login page or any other page
+                    window.location.href = '/login';
+                } else {
+                    throw new Error('Logout failed');
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+            }
+
+            function showHomePage() {
+            document.getElementById('hero-section').style.display = 'block';
+            document.getElementById('services-section').style.display = 'flex';
+            document.getElementById('drive-section').style.display = 'none';
+        }
+
+        function showDrivePage() {
+            document.getElementById('hero-section').style.display = 'none';
+            document.getElementById('services-section').style.display = 'none';
+            document.getElementById('drive-section').style.display = 'block';
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('file-upload').click();
+        }
+
+        function handleFilesUpload() {
+    var files = document.getElementById('file-upload').files;
+    var list = document.getElementById('file-list-ul');
+    list.innerHTML = ''; // Clear current list
+
+    for (var i = 0; i < files.length; i++) {
+      (function(file) {  // create a closure around the file object
+        var li = document.createElement('li');
+        li.textContent = file.name;
+        list.appendChild(li);
+
+        // Check if the file is a text file
+        if (file.type === 'text/plain') {
+          var reader = new FileReader();
+          reader.onload = function(event) {
+            // Once file content is read
+            var content = event.target.result;
+
+            // Prepare the post request
+            fetch('http://localhost:8080/createFile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Any other headers you need to set like authorization
+                },
+                body: JSON.stringify({ fileContent: content, fileName: file.name })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('File uploaded successfully', data);
+            })
+            .catch(error => {
+                console.log('There was an error uploading the file', error);
+            });
+          };
+          reader.onerror = function(event) {
+              console.error("File could not be read! Code " + event.target.error.code);
+          };
+          reader.readAsText(file);
+        } else {
+          console.log('File is not a text file:', file.name);
+        }
+      })(files[i]);
+    }
+
+      // Clear the input after processing files
+      document.getElementById('file-upload').value = '';
+    }
+
+
+
+        </script>
 </body>
 </html>
