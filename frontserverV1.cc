@@ -27,6 +27,7 @@
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/protocol/TBinaryProtocol.h>
 #include "gen-cpp/StorageOps.h"
+#include "gen-cpp/KvsCoordOps.h"
 
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
@@ -174,6 +175,23 @@ void signalHandlerWorkerThread(int signal) {
     }
 }
 
+string getWorkerIP(string row, KvsCoordOpsClient client){
+    string ip;
+    client.get(ip,row);
+    return ip;
+}
+
+std::tuple<std::shared_ptr<TTransport>, StorageOpsClient> getKVSClient(string ipPort){
+    size_t colonPos = ipPort.find(':');
+    string ip = ipPort.substr(0, colonPos);
+    int port = stoi(ipPort.substr(colonPos + 1));
+    shared_ptr<TTransport> socket(new TSocket(ip,port));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    StorageOpsClient client(protocol);
+    transport->open();
+    return std::make_tuple(transport, client);
+}
 
 
 // Worker function to handle the client requests
@@ -201,7 +219,7 @@ void *worker(void *arg) {
   shared_ptr<TTransport> socket(new TSocket("127.0.0.1", 8000));
   shared_ptr<TTransport> transport(new TBufferedTransport(socket));
   shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-  StorageOpsClient client(protocol);
+  KvsCoordOpsClient client(protocol);
   transport->open();
 
   while (true) {

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta viewport="width=device-width, initial-scale=1.0">
+    <title>Storage Drive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f1f3f4;
+            height: 100%;
+            position: relative;
+        }
+        .header-bar {
+            background-color: #4285f4;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drive-section {
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        .file-icon {
+            width: 100px;
+            height: 120px;
+            margin: 10px;
+            text-align: center;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid black;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .file-icon.selected {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .file-icon i {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        #add-file-button {
+            position: fixed;
+            right: 10px;
+            bottom: 10px;
+            padding: 10px 20px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid #888;
+            width: 70%;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            animation-name: animatetop;
+            animation-duration: 0.4s;
+        }
+
+        .modal-header {
+            padding: 2px 16px;
+            background-color: #4285f4;
+            color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .modal-body {padding: 2px 16px;}
+
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        @keyframes animatetop {
+            from {top: -300px; opacity: 0}
+            to {top: 0; opacity: 1}
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-bar">
+    <h1>PennCloud Storage</h1>
+    <p>Welcome, <span id="username">loading...</span>!</p>
+</div>
+
+<section class="drive-section" id="drive-section">
+    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp" onchange="handleFilesUpload()">
+</section>
+
+<button id="add-file-button">Add New File</button>
+
+<div id="fileModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">File Name</h2>
+        </div>
+        <div class="modal-body">
+            <pre id="fileContent"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchUsername();
+        fetchFiles();
+        document.getElementById('add-file-button').addEventListener('click', triggerFileUpload);
+    });
+
+    function triggerFileUpload() {
+        document.getElementById('file-upload').click();
+    }
+
+    function handleFilesUpload() {
+        var files = document.getElementById('file-upload').files;
+        if (files.length === 0) return;
+
+        const section = document.getElementById('drive-section');
+        Array.from(files).forEach(file => {
+            const fileIcon = createFileIcon(file.name, file.type);
+            section.appendChild(fileIcon);
+
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                console.log(event.target.result)
+                fetch('http://localhost:8080/createFile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fileContent: event.target.result, fileName: file.name, fileType: file.type })
+                })
+                .then(response => response.json())
+                .then(data => console.log('File uploaded successfully', data))
+                .catch(error => console.log('Error uploading the file', error));
+            };
+            reader.readAsDataURL(file);
+        });
+        document.getElementById('file-upload').value = '';
+    }
+
+    function createFileIcon(fileName, fileType) {
+    const icon = document.createElement('div');
+    icon.className = 'file-icon';
+    const iconImg = document.createElement('i');
+    iconImg.className = 'fas ' + getFileIcon(fileType);
+    const text = document.createElement('div');
+    text.textContent = fileName;
+    icon.appendChild(iconImg);
+    icon.appendChild(text);
+    icon.onclick = function() {
+        const isSelected = icon.classList.toggle('selected');
+        if (isSelected) {
+            fetch('http://localhost:8080/viewFile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ fileName: fileName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(decodeBase64(data.fileContent));
+                showModal(decodeBase64(data.fileContent),data.fileName,data.time);
+            })
+            .catch(error => console.log('Error selecting file:', error));
+             icon.classList.toggle('selected');
+        }
+
+    };
+    return icon;
+}
+
+function decodeBase64(base64String) {
+    const base64Content = base64String.split(',')[1];
+    return atob(base64Content);  // Decode base64 string
+}
+
+function showModal(data, fileName,time) {
+    var modal = document.getElementById("fileModal");
+    var title = document.getElementById("modalTitle");
+    var content = document.getElementById("fileContent");
+    var span = document.getElementsByClassName("close")[0];
+
+    title.textContent = fileName;  // Set the file name in the modal header
+    content.textContent = data // Assume data is JSON for demonstration
+
+    modal.style.display = "block";
+
+    span.onclick = function() {
+        modal.style.display = "none";
+    };
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
+}
+    function getFileIcon(fileType) {
+        if (fileType === 'application/pdf') {
+            return 'fa-file-pdf';
+        } else if (fileType === 'application/msword' || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            return 'fa-file-word';
+        } else if (fileType === 'text/plain') {
+            return 'fa-file-alt';
+        }
+        return 'fa-file';
+    }
+
+    function fetchFiles() {
+        fetch('http://localhost:8080/getFiles', {
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(files => {
+            const section = document.getElementById('drive-section');
+            files.forEach(file => {
+                const fileIcon = createFileIcon(file.name, file.type);
+                section.appendChild(fileIcon);
+            });
+        })
+        .catch(error => console.error('Error fetching files:', error));
+    }
+
+    function fetchUsername() {
+        fetch('http://localhost:8080/getUser', { method: 'GET' })
+        .then(response => response.json())
+        .then(username => {
+            document.getElementById('username').textContent = username.user;
+        })
+        .catch(error => console.error('Error fetching user data:', error));
+    }
+</script>
+</body>
+</html>

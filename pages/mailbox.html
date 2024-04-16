@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta viewport="width=device-width, initial-scale=1.0">
+    <title>Interactive Email Inbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f1f3f4;
+            height: 100%;
+        }
+        .sidebar {
+            background-color: #fff;
+            border-right: 1px solid #e0e0e0;
+            padding: 10px;
+            height: 100%;
+            width: 240px;
+            position: fixed;
+            overflow-y: auto;
+        }
+        .compose-btn {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: auto; /* Adjust width as needed */
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: fixed; /* Make it float */
+            bottom: 20px; /* Distance from bottom */
+            right: 20px; /* Distance from right */
+            z-index: 100; /* Ensure it's above other content */
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 4px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        input[type="email"], textarea {
+        width: 98%; /* Increased width */
+        padding: 15px 20px; /* Increased padding */
+        margin: 8px 0;
+        display: inline-block;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+
+    textarea {
+        height: 200px; /* Set a specific height for the textarea */
+    }
+    .compose-form .email-input-container,
+    .compose-form input[type="text"], 
+    .compose-form textarea {
+        padding: 10px; /* Adequate padding on all sides */
+        box-sizing: border-box; /* This ensures padding is included in the total width and height */
+        width: calc(100% - 23px); /* Calculate width, subtracting padding */
+        margin-bottom: 10px; /* Space between elements */
+        border: 1px solid #ccc; /* Border style */
+        border-radius: 4px; /* Rounded corners */
+    }
+        .compose-form button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .email-list {
+            margin-left: 0; /* Adjust according to sidebar width */
+            padding: 20px;
+        }
+        .email-item, .email-details {
+            background-color: #fff;
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .email-item {
+            cursor: pointer;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .email-details {
+            display: none; /* Initially hidden */
+        }
+        .email-actions button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .email-actions button:hover {
+            background-color: #357ae8;
+        }
+
+        .email-container {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+
+        .email-item span {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .email-details {
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .email-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .email-sender, .email-subject, .email-date {
+            margin: 0;
+            white-space: nowrap; /* Prevents wrapping */
+        }
+
+        /* Optional: If you want the subject to truncate with ellipsis when too long */
+        .email-subject {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            margin: 0 10px; /* Ensures spacing around the subject */
+        }
+
+        .email-date {
+            font-style: italic;
+            color: #777;
+            font-size: 0.9em;
+        }
+        .readonly-but-not-grey {
+            background-color: white; /* Keeps the background looking normal */
+            color: black; /* Ensures text is easily readable */
+            border: 1px solid #ccc; /* Standard border to mimic enabled inputs */
+        }
+
+        .header-bar {
+            background-color: #4285f4;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-bar h1 {
+            margin: 0; /* Remove default margin */
+            font-size: 24px; /* Adjust the size as needed */
+        }
+
+        .header-bar p {
+            margin: 0; /* Remove default margin */
+            font-size: 16px; /* Adjust the size as needed */
+        }
+        .email-input-container {
+            border: none;
+            padding: 5px 40px 5px 5px; /* Increase left padding */
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            width: 430px;
+        }
+
+        .email-input-container input[type="text"] {
+            margin: 0 0px;
+            width: 430px;
+        }
+
+        .email-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px;
+            background-color: #e0e0e0;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+
+        .email-tag .remove-email {
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .alert-box {
+            display: none; /* Hidden by default */
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background-color: grey;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0px -2px 4px rgba(0,0,0,0.3);
+            z-index: 1000; /* Make sure it appears above other content */
+        }
+
+        .button-container {
+            text-align: right;  /* Aligns the button to the left */
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<!-- <div class="sidebar">
+   
+</div> -->
+
+<div class="header-bar">
+    <h1>PennCloud Email</h1>
+    <p>Welcome, <span id="username">loading...</span>!</p>
+</div>
+
+<div id="alertBox" class="alert-box" style="display: none;">This is an alert message!</div>
+
+<button class="compose-btn" onclick="document.getElementById('composeModal').style.display='block'">Compose</button>
+
+<div id="composeModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeComposeModal()">&times;</span>
+        <form class="compose-form">
+            <div id="composeToContainer" class="email-input-container">
+                <input type="text" id="composeTo" placeholder="Add recipients..." />
+            </div>
+            
+            <input type="text" placeholder="Subject" id="composeSubject">
+            <textarea placeholder="Compose email" id="composeBody"></textarea>
+            <button type="button" onclick="sendEmail()">Send</button>
+        </form>
+    </div>
+</div>
+
+
+<div id="replyModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeReplyModal()">&times;</span>
+        <form class="compose-form">
+            <input type="text" placeholder="To" id="replyTo"  class="readonly-but-not-grey" readonly onfocus="this.blur();">
+            <input type="text" placeholder="Subject" id="replySubject" style="display: none;">
+            <textarea placeholder="Compose email" id="replyBody"></textarea>
+            <button type="button" onclick="sendReply()">Send</button>
+        </form>
+    </div>
+</div>
+
+<div id="forwardModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeForwardModal()">&times;</span>
+        <form class="compose-form">
+        <div id="forwardToContainer" class="email-input-container">
+            <input type="text" id="forwardToEmail"  placeholder="Add recipients..." />
+        </div>
+        <input type="text" placeholder="Subject" id="forwardSubject" style="display: none;">
+        <textarea id="forwardMessage" placeholder="Forwarded message will appear here"></textarea>
+        <button type="button" onclick="sendForward()">Forward</button>
+    </form>
+    </div>
+</div>
+
+
+<div class="email-list" id="emailList">
+    <!-- Email items will be inserted here -->
+</div>
+
+<script>
+let emailArray = [];
+
+
+function setupEmailInputListener(inputId,container) {
+    const inputElement = document.getElementById(inputId);
+    inputElement.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.key === ',') {
+            event.preventDefault(); // Prevent form submission or any default action
+            const email = inputElement.value.trim().replace(/,/g, ''); // Remove commas & trim spaces
+            if (email) { // Check if there's a non-empty value
+                addEmailTag(email,inputElement,container);
+            }
+            inputElement.value = ''; // Clear input for the next email
+        }
+    });
+}
+
+function addEmailTag(email,inputElement,containerName) {
+    if (!emailArray.includes(email)) { // Avoid duplicate emails
+        emailArray.push(email);
+        const container = document.getElementById(containerName);
+        const tag = document.createElement('span');
+        tag.className = 'email-tag';
+        tag.textContent = email;
+
+        const removeBtn = document.createElement('span');
+        removeBtn.textContent = '✖';
+        removeBtn.className = 'remove-email';
+        removeBtn.onclick = function() { container.removeChild(tag); };
+
+        tag.appendChild(removeBtn);
+        container.insertBefore(tag, inputElement);
+    }
+}
+
+function showAlert(message) {
+    var alertBox = document.getElementById('alertBox');
+    alertBox.innerHTML = message; // Set the message
+    alertBox.style.display = 'block'; // Show the alert box
+
+    // Hide the alert box after 4 seconds
+    setTimeout(function() {
+        alertBox.style.display = 'none';
+    }, 5000);
+}
+
+
+    function sendEmail() {
+        if (emailArray.length === 0) {
+            showAlert('Email IDs are needed before sending or forwarding.');
+            return;
+        }
+
+        var emails = emailArray;
+        var subject = document.getElementById('composeSubject').value;
+        var body = document.getElementById('composeBody').value;
+        emails.forEach(email => {
+    
+        
+        const data = { email: email, subject: subject, body: body};
+        console.log(JSON.stringify(data))
+
+        fetch('http://localhost:8080/sendEmail', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(data => {
+        if (data.message === "Error") {
+            alert("Error")
+        } else {
+            window.location.href = '/mailbox';
+            fetch('http://localhost:8080/mailbox', {
+            method: 'GET',
+            })
+            .then(response => response.json())
+            .then(data => {
+            console.log('Success:', data);
+            })
+            .catch((error) => {
+            console.error('Error:', error);
+            // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+            });
+        }
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+        });
+        emailArray = []; 
+        closeComposeModal();
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('composeModal')) {
+            document.getElementById('composeModal').style.display = "none";
+        }
+    }
+
+    let expandedEmails = new Set(); 
+
+    function fetchEmails() {
+        fetch('http://localhost:8080/getMail', {
+            method: 'GET',
+            })
+            .then(response => response.json())
+            .then(emails => {
+                renderEmails(emails);
+            })
+            .catch(error => console.error('Error fetching emails:', error));
+    }
+
+    function fetchUsername() {
+        fetch('http://localhost:8080/getUser', {
+            method: 'GET',
+            })
+            .then(response => response.json())
+            .then(username => {
+                renderUsername(username.user);
+            })
+            .catch(error => console.error('Error fetching emails:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+    fetchUsername()
+    fetchEmails();
+    setupEmailInputListener('composeTo','composeToContainer');
+    setupEmailInputListener('forwardToEmail','forwardToContainer');
+
+    setInterval(fetchEmails, 2000);
+
+
+    document.getElementById('emailList').addEventListener('click', function(event) {
+        if (event.target.classList.contains('email-item') || event.target.closest('.email-item') && !event.target.closest('.email-actions')) {
+            const index = event.target.closest('.email-item').getAttribute('data-index');
+            toggleEmailDetails(index);
+        }
+    });
+});
+
+function formatEmailBody(bodyText) {
+    // Replace each newline character with a <br> tag
+    return bodyText.replace(/\n/g, '<br>');
+}
+
+function unformatEmailBody(bodyText) {
+    // Replace each newline character with a <br> tag
+    return bodyText.replace(/<br\s*\/?>/gi, '\n');
+}
+
+
+function renderEmails(emails) {
+    const emailList = document.getElementById('emailList');
+    emailList.innerHTML = ''; // Clear existing content
+    emails.forEach((email, index) => {
+        const emailDiv = document.createElement('div');
+        emailDiv.classList.add('email-container');
+        emailDiv.setAttribute('data-index', index); // Keep the index for reference if needed
+        emailDiv.setAttribute('data-email-hash', email.hash); // Store the email's unique hash as a data attribute
+
+        const senderName = email.from.split('@')[0];
+        const dateTime = email.time; // Format as needed
+
+        // Building the HTML structure
+        emailDiv.innerHTML = `
+            <div class="email-item" data-index="${index}" onclick="toggleEmailDetails('${email.hash}')">
+                <div class="email-main">
+                    <span class="email-sender"><strong>${senderName}</strong></span>
+                    <span class="email-subject">${email.subject}</span>
+                    <span class="email-date">${dateTime}</span>
+                </div>
+            </div>
+            <div class="email-details" id="emailDetails${email.hash}" style="display: none;">
+                <p><strong>From:</strong> ${email.from}</p>
+                <p>${formatEmailBody(email.body)}</p>
+                <div class="email-actions">
+                    <button onclick="event.stopPropagation(); replyEmail('${email.hash}','${email.from}','${email.subject}');">Reply</button>
+                    <button onclick="event.stopPropagation(); forwardEmail('${email.hash}','${email.from}','${email.subject}','${email.time}','${formatEmailBody(email.body)}');">Forward</button>
+                    <button onclick="event.stopPropagation(); deleteEmail('${index}','${email.hash}', this);">Delete</button>
+                </div>
+            </div>
+        `;
+
+        emailList.appendChild(emailDiv);
+
+        // Automatically expand emails that have been previously expanded
+        if (expandedEmails.has(email.hash)) { // Assume expandedEmails now tracks email hashes
+            const details = document.getElementById(`emailDetails${email.hash}`);
+            details.style.display = 'block';
+        }
+    });
+}
+function renderUsername(username) {
+    console.log(username)
+    const usernameSpan = document.getElementById('username');
+    usernameSpan.textContent = username;
+}
+0
+
+function toggleEmailDetails(emailHash) {
+    const details = document.getElementById(`emailDetails${emailHash}`);
+    if (details) {
+        const isExpanded = details.style.display === 'block';
+        details.style.display = isExpanded ? 'none' : 'block';
+        
+        if (!isExpanded) {
+            expandedEmails.add(emailHash);
+        } else {
+            expandedEmails.delete(emailHash);
+        }
+    }
+}
+
+// Placeholder functions for email actions
+function replyEmail(emailId,sender,subject) {
+    console.log(`Reply to email ID: ${emailId}`);
+    document.getElementById('replyModal').style.display = 'block';
+    document.getElementById('replyTo').value = sender;
+    document.getElementById('replySubject').value = "RE : " + subject;
+
+    
+}
+
+function sendReply() {
+    var email = document.getElementById('replyTo').value
+    var subject = document.getElementById('replySubject').value;
+    var body = document.getElementById('replyBody').value;
+    const data = { email: email, subject: subject, body: body};
+
+
+    fetch('http://localhost:8080/sendEmail', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+    if (data.message === "Error") {
+        alert("Error")
+    } else {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox', {
+        method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+
+        });
+    }
+    })
+    .catch((error) => {
+    console.error('Error:', error);
+    // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+
+    });
+
+    closeReplyModal();
+    // Implement the reply functionality
+}
+
+function clearEmailTags(tag,container) {
+    const composeToContainer = document.getElementById(container);
+    // Remove all email tags. Adjust this based on your specific implementation.
+    composeToContainer.querySelectorAll('.email-tag').forEach(tag => tag.remove());
+    
+    // If there's an input field within composeToContainer for adding new emails, clear it as well.
+    const inputField = document.getElementById(tag);
+    if (inputField) {
+        inputField.value = ''; // Reset the input field for the next use
+    }
+}
+
+function closeForwardModal() {
+    document.getElementById('forwardModal').style.display = 'none';
+    document.getElementById('forwardToEmail').value = ''
+    document.getElementById('forwardMessage').value = ''
+    emailArray = [];
+    clearEmailTags('forwardToEmail','forwardToContainer');
+}
+
+function closeComposeModal() {
+    document.getElementById('composeModal').style.display = 'none';
+    document.getElementById('composeTo').value = ''
+    document.getElementById('composeSubject').value = ''
+    document.getElementById('composeBody').value = ''
+    emailArray = [];
+    clearEmailTags('composeTo','composeToContainer');
+}
+
+function closeReplyModal() {
+    document.getElementById('replyModal').style.display = 'none';
+    document.getElementById('replyTo').value = ''
+    document.getElementById('replySubject').value = ''
+    document.getElementById('replyBody').value = ''
+
+}
+
+function forwardEmail(emailId,sender,subject,date,body) {
+    console.log(`Forward email ID: ${emailId}`);
+    document.getElementById('forwardModal').style.display = 'block';
+    const originalMessage = "From: " + sender + "\n" + "Date: " + date + "\n" + "Subject: " + subject + "\nTo: dummy" + "\n\n" + unformatEmailBody(body);
+    document.getElementById('forwardMessage').value = "\n\n---Forwarded message---\n" + originalMessage;
+    document.getElementById('forwardSubject').value =  subject;
+
+}
+
+function sendForward() {
+    var emails = emailArray
+    var subject = document.getElementById('forwardSubject').value;
+    var body = document.getElementById('forwardMessage').value;
+
+    console.log(emails);
+    
+    emails.forEach(email => {
+    const data = { email: email, subject:subject, body: body};
+    fetch('http://localhost:8080/sendEmail', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+    if (data.message === "Error") {
+        alert("Error")
+    } else {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox', {
+        method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+
+        });
+    }
+    })
+    .catch((error) => {
+    console.error('Error:', error);
+    // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+    });
+    });
+    emailArray = [];   
+    closeForwardModal();
+    // Implement the reply functionality
+}
+
+function deleteEmail(index,hash) {
+    const data = { emailHash: hash};
+
+    console.log(`Delete email at hash: ${index}`);
+    fetch('http://localhost:8080/deleteEmail', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+    if (data.message === "Error") {
+        alert("Error")
+    } else {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox', {
+        method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    })
+    .catch((error) => {
+    console.error('Error:', error);
+    // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+    });
+
+    // // Assuming 'emails' is accessible, update to use emailId if possible for accuracy
+    expandedEmails.delete(index.toString());
+    fetchEmails(); // Refresh the list or alternatively, update the UI directly if not refetching
+}
+</script>
+</body>
+</html>

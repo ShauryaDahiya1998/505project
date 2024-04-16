@@ -35,7 +35,7 @@ using namespace ::apache::thrift::server;
 using namespace  ::storage;
 
 
-#define LogCompactSize 100
+#define LogCompactSize 10000
 
 std::string dir;
 std::string logFileName;
@@ -43,6 +43,37 @@ std::string tabletFileName;
 std::map<std::string, std::map<std::string, std::string>> tablet;
 std::ofstream logFileFD;
 std::vector<std::string> replicas;
+
+
+std::string stringToBinary(std::string input) {
+    std::string binaryString;
+    for (char c : input) {
+        binaryString += std::bitset<8>(c).to_string();
+    }
+    return binaryString;
+}
+
+std::string binaryToString(std::string binary) {
+    std::string text = "";
+    for (size_t i = 0; i < binary.length(); i += 8) { // Assuming a space separates every 8 bits
+        // Substring of 8 bits and conversion to char
+        std::string byteString = binary.substr(i, 8);
+        char character = static_cast<char>(std::bitset<8>(byteString).to_ulong());
+        text += character;
+    }
+    // std::cout << text << std::endl;
+    return text;
+}
+
+void printTablet() {
+    for (const auto& outerPair : tablet) {
+        std::cout << outerPair.first << ":\n"; // Print the key of the outer map
+        for (const auto& innerPair : outerPair.second) {
+            // Print the key-value pairs of the inner map
+            std::cout << "  " << innerPair.first << " => " << innerPair.second << "\n";
+        }
+    }
+}
 
 
 bool openLogFile(std::string filename) {
@@ -83,6 +114,7 @@ void readTabletFromDisk(std::string filename) {
         while (std::getline(tabletFile, line)) {
             std::istringstream iss(line);
             std::string row;
+            // std::cout << line ;
             if (!(std::getline(iss, row, ':'))) {
                 continue;
             }
@@ -235,9 +267,11 @@ class StorageOpsHandler : virtual public StorageOpsIf {
 
   bool put(const std::string& row, const std::string& col, const std::string& value) {
     // Your implementation goes here
-    tablet[row][col] = value;
-    replicatePut(row,col,value);
-    std::string log = "PUT " + row + " " + col + " " + value;
+    std::string bytesData = stringToBinary(value);
+    // std::cout << bytesData<<std::endl;
+    tablet[row][col] = bytesData;
+    replicatePut(row,col,bytesData);
+    std::string log = "PUT " + row + " " + col + " " + bytesData;
     writeLog(log);
     return true;
   }
@@ -253,7 +287,7 @@ void get(std::string& _return, const std::string& row, const std::string& col) {
     if(!valueExists(row,col))
         _return = "-ERR invalid row/column\r\n";
     else
-        _return = tablet[row][col];
+        _return = binaryToString(tablet[row][col]);
   }
 
   bool deleteCell(const std::string& row, const std::string& col) {
@@ -317,6 +351,7 @@ int main(int argc, char *argv[])
     readConfig(configFileName);
     replayLogFile(logFileName);
     openLogFile(logFileName);
+    printTablet();
    
     int c = 0;
     char* portArg = nullptr;

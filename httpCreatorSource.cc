@@ -36,8 +36,10 @@ string HttpResponseCreator::createGetResponse(HttpResponseCreator response) {
     }
 }
 
-void setSession(string username, string data, string mdata, string expirationTime, string sessionID, StorageOpsClient client) {
+void setSession(string username, string data, string mdata, string expirationTime, string sessionID, KvsCoordOpsClient client) {
     string putValue = "";
     putValue += username + "," + data + "," + mdata + "," + expirationTime;
-    client.put(sessionID, "1", putValue);
+    auto [transport, kvsClient] =  getKVSClient(getWorkerIP(sessionID,client));
+    kvsClient.put(sessionID, "1", putValue);
+    transport->close();
 }
