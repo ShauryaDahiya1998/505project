@@ -24,6 +24,10 @@ int smtpClient(map<string, string> json,std::string domain,std::string body);
 std::string getUsernameFromEmail(const std::string& email);
 string getWorkerIP(string row, KvsCoordOpsClient client);
 std::tuple<std::shared_ptr<TTransport>, StorageOpsClient> getKVSClient(string ipPort);
+void* startSMTPServer(void* arg);
+std::string getCurrentTimestamp();
+std::string sha256(string input);
+
 
 class HttpResponseCreator {
   public:

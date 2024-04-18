@@ -405,6 +405,21 @@ int main(int argc, char *argv[])
       }
   }
 
+  pthread_t smtpThread;
+    int result;
+
+    // Create the pthread to run the SMTP server
+    result = pthread_create(&smtpThread, NULL, startSMTPServer, NULL);
+    if (result != 0) {
+        std::cerr << "Failed to create the SMTP thread" << std::endl;
+        return -1;
+    }
+    pthread_detach(smtpThread);
+
+
+    // Continue with the rest of the main server initialization
+    std::cout << "Main server is starting..." << std::endl;
+
   //Create a socket
   int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 

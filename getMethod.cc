@@ -15,7 +15,7 @@ using namespace storage;
 using namespace std;
 
 string sendToLandingPage(string sessionId) {
-    ifstream ifs("./pages/landing.html");
+    ifstream ifs("./pages/landing2.html");
     string landingPage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
     HttpResponseCreator response;
     response.content_type = "text/html";
@@ -164,6 +164,7 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
             string email;
             auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
             kvsClient.get(email,row,str);
+            std::cout << "EMAIL GOTTEN " << email << endl;
             transport->close();
             vector<string> emailComp = splitString(email,"\r\n");
             nlohmann::json j;

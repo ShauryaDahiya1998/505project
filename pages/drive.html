@@ -2,28 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta viewport="width=device-width, initial-scale=1.0">
-    <title>Storage Drive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennCloud Storage</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #f1f3f4;
+         body, html {
             height: 100%;
-            position: relative;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .header-bar {
-            background-color: #4285f4;
+        .navbar {
+            background-color: navy;
             color: white;
-            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
+            padding: 25px; /* Increase padding to make the header bigger */
+            font-size: 1.5em; /* Larger font size */
+        }
+        .welcome-message {
+            font-size: 1em; /* Relative size to the navbar */
+            margin-right: 10px;
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+        }
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+        }
+        .service div{
+            margin-bottom: 20px; /* More space between services */
+            display: flex;
+            align-items: center;
+            font-size: 1.3em; /* Larger font size for service text */
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px;
+
+        }
+        .service i {
+            font-size: 1.8em; /* Larger icons */
+            margin-right: 15px; /* More space between icon and text */
+            width: 30px; /* Ensure the width of icons are the same */
+        }
+        .service .fa-cloud { color: teal; } /* Mail icon color */
+        .service .fa-home { color: black; } /* Mail icon color */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-tools { color: purple; } /* Admin icon color */
+        .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
+
+        .unique-id {
+            background-color: #ff5722; /* Orange */
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            word-wrap: break-word;
+            border-radius: 8px; /* Rounded corners */
         }
         .drive-section {
+            margin-left: 300px; 
             padding: 1rem;
             display: flex;
             flex-wrap: wrap;
@@ -59,7 +110,8 @@
             right: 10px;
             bottom: 10px;
             padding: 10px 20px;
-            background-color: #4285f4;
+            font-size: 18px;
+            background-color: navy;
             color: white;
             border: none;
             border-radius: 5px;
@@ -92,12 +144,16 @@
 
         .modal-header {
             padding: 2px 16px;
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border-bottom: 1px solid #ddd;
+            font-size: 1em; /* Decreased font size for header */
         }
 
-        .modal-body {padding: 2px 16px;}
+        .modal-body {
+            padding: 2px 16px;
+            font-size: 1.5em; /* Increased font size for body */
+        }
 
         .close {
             color: white;
@@ -126,10 +182,22 @@
 </head>
 <body>
 
-<div class="header-bar">
-    <h1>PennCloud Storage</h1>
-    <p>Welcome, <span id="username">loading...</span>!</p>
-</div>
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+        <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="service">
+            <div class="service-home" onclick="fetchHomePage()"><i class="fas fa-home"></i>Home</div>
+            <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
+            <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
+            <div class="service-admin"><i class="fas fa-tools"></i>Admin</div>
+            <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+        </div>
+    </div>
 
 <section class="drive-section" id="drive-section">
     <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp" onchange="handleFilesUpload()">
@@ -275,6 +343,67 @@ function showModal(data, fileName,time) {
             document.getElementById('username').textContent = username.user;
         })
         .catch(error => console.error('Error fetching user data:', error));
+    }
+
+    function fetchMailboxPage() {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+        
+    function fetchDrivePage() {
+        window.location.href = '/drive';
+        fetch('http://localhost:8080/drive',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchHomePage() {
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    function logout() {
+        fetch('http://localhost:8080/logout', {
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                // Redirect to login page or any other page
+                window.location.href = '/login';
+            } else {
+                throw new Error('Logout failed');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+    });
     }
 </script>
 </body>

@@ -28,7 +28,6 @@
 #include <netdb.h>
 #include <sys/stat.h>
 
-bool debugMode = true;
 #define MAX_DOMAIN_LENGTH 256
 
 
@@ -37,7 +36,6 @@ void sendCommand(int sockfd,  const std::string& command) {
     strcpy(buffer, command.c_str());
     strcat(buffer, "\r\n");
     send(sockfd, buffer, strlen(buffer), 0);
-    if(debugMode)
         std::cout << "[C] " << command << std::endl;
 }
 
@@ -75,7 +73,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
 
     char buffer[1024] = {0};
     recv(sockfd, buffer, sizeof(buffer), 0); 
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
 
     // Check for error cases
@@ -87,7 +84,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
     // Send HELO command
     sendCommand(sockfd, "HELO seas.upenn.edu");
     recv(sockfd, buffer, sizeof(buffer), 0);
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
         // Check for error cases
     if (buffer[0] == '5') {
@@ -99,7 +95,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
 
     sendCommand(sockfd, "MAIL FROM:<sukritiy@seas.upenn.edu>");
     recv(sockfd, buffer, sizeof(buffer), 0);
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
         // Check for error cases
     if (buffer[0] == '5') {
@@ -112,7 +107,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
     std::string rcpt = "RCPT TO:<" + rcptEmail + ">";
     sendCommand(sockfd, rcpt);
     recv(sockfd, buffer, sizeof(buffer), 0);
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
         // Check for error cases
     if (buffer[0] == '5') {
@@ -123,7 +117,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
     // Send DATA command
     sendCommand(sockfd, "DATA");
     recv(sockfd, buffer, sizeof(buffer), 0);
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
         // Check for error cases
     if (buffer[0] == '5') {
@@ -139,7 +132,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
     // End the email
     sendCommand(sockfd, ".");
     recv(sockfd, buffer, sizeof(buffer), 0);
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
     if (buffer[0] == '5') {
         std::cerr << "Error response received from server" << std::endl;
@@ -151,7 +143,6 @@ int send_email(const char *mail_server_ip, int port,  map<string,string> json,st
     sendCommand(sockfd, "QUIT");
     recv(sockfd, buffer, sizeof(buffer), 0);
     
-    if(debugMode)
         std::cout << "[S] " << buffer << std::endl;
     // Check for error cases
     if (buffer[0] == '5') {
@@ -207,13 +198,12 @@ int lookup_mx_records(const std::string &domain, std::string &mail_server_ip) {
             }
             // Converting the IP address and storing it
             mail_server_ip = inet_ntoa(*(struct in_addr *)mx_host->h_addr_list[0]);
-            if(debugMode)
                 std::cout <<"MAIL SERVER " << mail_server_ip << " " << mx_host->h_name << std::endl;
             return 0;
         }
         
     }
-    if(debugMode)
+
         std::cout << "No MX records found" << std::endl;
     return -1;
 }

@@ -2,41 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta viewport="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Email Inbox</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #f1f3f4;
+       body, html {
             height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: navy;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 25px; /* Increase padding to make the header bigger */
+            font-size: 1.5em; /* Larger font size */
+            position: relative; 
+        }
+        .welcome-message {
+            font-size: 1em; /* Relative size to the navbar */
+            margin-right: 10px;
         }
         .sidebar {
-            background-color: #fff;
-            border-right: 1px solid #e0e0e0;
-            padding: 10px;
-            height: 100%;
-            width: 240px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
             position: fixed;
-            overflow-y: auto;
         }
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .service div{
+            margin-bottom: 20px; /* More space between services */
+            display: flex;
+            align-items: center;
+            font-size: 1.3em; /* Larger font size for service text */
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px;
+        }
+        .service i {
+            font-size: 1.8em; /* Larger icons */
+            margin-right: 15px; /* More space between icon and text */
+            width: 30px; /* Ensure the width of icons are the same */
+        }
+        .service .fa-cloud { color: whitesmoke; } /* Mail icon color */
+        .service .fa-home { color: black } /* Mail icon color */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-tools { color: purple; } /* Admin icon color */
+        .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
+
+        .unique-id {
+            background-color: #ff5722; /* Orange */
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            word-wrap: break-word;
+            border-radius: 8px; /* Rounded corners */
+        }
+
         .compose-btn {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 12px 20px;
-            margin-bottom: 20px;
-            font-size: 16px;
+            font-size: 20px;
             cursor: pointer;
-            width: auto; /* Adjust width as needed */
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            position: fixed; /* Make it float */
-            bottom: 20px; /* Distance from bottom */
-            right: 20px; /* Distance from right */
-            z-index: 100; /* Ensure it's above other content */
+            border-radius: 7px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
         }
         .modal {
             display: none;
@@ -49,7 +96,7 @@
             overflow: auto;
             background-color: rgb(0,0,0);
             background-color: rgba(0,0,0,0.4);
-            padding-top: 60px;
+            padding-top: 80px;
         }
         .modal-content {
             background-color: #fefefe;
@@ -73,148 +120,120 @@
             cursor: pointer;
         }
         input[type="email"], textarea {
-        width: 98%; /* Increased width */
-        padding: 15px 20px; /* Increased padding */
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-    }
-
-    textarea {
-        height: 200px; /* Set a specific height for the textarea */
-    }
-    .compose-form .email-input-container,
-    .compose-form input[type="text"], 
-    .compose-form textarea {
-        padding: 10px; /* Adequate padding on all sides */
-        box-sizing: border-box; /* This ensures padding is included in the total width and height */
-        width: calc(100% - 23px); /* Calculate width, subtracting padding */
-        margin-bottom: 10px; /* Space between elements */
-        border: 1px solid #ccc; /* Border style */
-        border-radius: 4px; /* Rounded corners */
-    }
+            width: 98%; /* Increased width */
+            padding: 15px 20px; /* Increased padding */
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 200px; /* Set a specific height for the textarea */
+        }
+        .compose-form .email-input-container,
+        .compose-form input[type="text"], 
+        .compose-form textarea {
+            padding: 10px; /* Adequate padding on all sides */
+            box-sizing: border-box; /* This ensures padding is included in the total width and height */
+            width: calc(100% - 23px); /* Calculate width, subtracting padding */
+            margin-bottom: 10px; /* Space between elements */
+            border: 1px solid #ccc; /* Border style */
+            border-radius: 4px; /* Rounded corners */
+        }
         .compose-form button {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 10px 15px;
-            font-size: 14px;
+            font-size: 18px;
             cursor: pointer;
             border-radius: 4px;
         }
         .email-list {
-            margin-left: 0; /* Adjust according to sidebar width */
+            margin-left: 300px; /* Adjusted for sidebar width plus some extra space */
             padding: 20px;
+            overflow-y: auto;
+            height: calc(100vh - 50px); /* Adjust height if your navbar is different */
+            background: #f8f9fa;
         }
-        .email-item, .email-details {
+
+
+        .email-container {
             background-color: #fff;
-            padding: 12px;
-            margin: 5px 0;
+            margin-bottom: 10px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s ease-in-out;
         }
+
         .email-item {
-            cursor: pointer;
-            padding: 10px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
         }
+
+        .email-item:last-child {
+            border-bottom: none;
+        }
+
+        .email-item:hover {
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        
+        .email-main {
+            display: flex;
+            flex: 1;
+            justify-content: space-between;
+            overflow: hidden; /* Prevents content from spilling over */
+        }
+
+        .email-sender {
+            flex: 0 0 auto; /* The sender's name will not grow or shrink */
+            margin-right: 20px; /* Spacing between the sender's name and the subject */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-subject {
+            flex: 1; /* Allows the subject to grow and fill available space */
+            text-align: left;
+            margin-right: 20px; /* Spacing between the subject and the date */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-date {
+            flex: 0 0 auto; /* The date will not grow or shrink */
+            white-space: nowrap;
+        }
+
         .email-details {
-            display: none; /* Initially hidden */
+            display: none; /* Initially hidden, shown when clicked */
+            padding: 10px;
+            background-color: #f9f9f9;
         }
+
         .email-actions button {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 6px 12px;
             margin-right: 8px;
-            font-size: 12px;
+            font-size: 16px;
             cursor: pointer;
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+
         .email-actions button:hover {
             background-color: #357ae8;
-        }
-
-        .email-container {
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 10px;
-        }
-
-        .email-item span {
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        .email-details {
-            padding: 10px;
-            background-color: #f9f9f9;
-        }
-        .email-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .email-sender, .email-subject, .email-date {
-            margin: 0;
-            white-space: nowrap; /* Prevents wrapping */
-        }
-
-        /* Optional: If you want the subject to truncate with ellipsis when too long */
-        .email-subject {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex-grow: 1;
-            margin: 0 10px; /* Ensures spacing around the subject */
-        }
-
-        .email-date {
-            font-style: italic;
-            color: #777;
-            font-size: 0.9em;
-        }
-        .readonly-but-not-grey {
-            background-color: white; /* Keeps the background looking normal */
-            color: black; /* Ensures text is easily readable */
-            border: 1px solid #ccc; /* Standard border to mimic enabled inputs */
-        }
-
-        .header-bar {
-            background-color: #4285f4;
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-bar h1 {
-            margin: 0; /* Remove default margin */
-            font-size: 24px; /* Adjust the size as needed */
-        }
-
-        .header-bar p {
-            margin: 0; /* Remove default margin */
-            font-size: 16px; /* Adjust the size as needed */
-        }
-        .email-input-container {
-            border: none;
-            padding: 5px 40px 5px 5px; /* Increase left padding */
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            width: 430px;
-        }
-
-        .email-input-container input[type="text"] {
-            margin: 0 0px;
-            width: 430px;
         }
 
         .email-tag {
@@ -245,21 +264,52 @@
             z-index: 1000; /* Make sure it appears above other content */
         }
 
-        .button-container {
-            text-align: right;  /* Aligns the button to the left */
-            margin-top: 10px;
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .email-list {
+                margin-left: 0;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: none;
+                padding: 10px;
+            }
+            .service div {
+                font-size: 1em; /* Adjust font size for smaller screens */
+            }
+            .service i {
+                font-size: 1.4em; /* Adjust icon size for smaller screens */
+            }
+            .compose-btn {
+                font-size: 16px;
+                padding: 10px;
+            }
         }
+
     </style>
 </head>
 <body>
-<!-- <div class="sidebar">
-   
-</div> -->
 
-<div class="header-bar">
-    <h1>PennCloud Email</h1>
-    <p>Welcome, <span id="username">loading...</span>!</p>
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+        <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
+        </div>
+    </div>
+
+<div class="sidebar">
+    <div class="service">
+        <div class="service-home" onclick="fetchHomePage()"><i class="fa fa-home"></i>Home</div>
+        <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
+        <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
+        <div class="service-admin"><i class="fas fa-tools"></i>Admin</div>
+        <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+    </div>
 </div>
+
+
 
 <div id="alertBox" class="alert-box" style="display: none;">This is an alert message!</div>
 
@@ -446,7 +496,7 @@ function showAlert(message) {
     setupEmailInputListener('composeTo','composeToContainer');
     setupEmailInputListener('forwardToEmail','forwardToContainer');
 
-    setInterval(fetchEmails, 2000);
+     setInterval(fetchEmails, 2000); 
 
 
     document.getElementById('emailList').addEventListener('click', function(event) {
@@ -472,6 +522,7 @@ function renderEmails(emails) {
     const emailList = document.getElementById('emailList');
     emailList.innerHTML = ''; // Clear existing content
     emails.forEach((email, index) => {
+        console.log(email);
         const emailDiv = document.createElement('div');
         emailDiv.classList.add('email-container');
         emailDiv.setAttribute('data-index', index); // Keep the index for reference if needed
@@ -510,18 +561,16 @@ function renderEmails(emails) {
     });
 }
 function renderUsername(username) {
-    console.log(username)
     const usernameSpan = document.getElementById('username');
     usernameSpan.textContent = username;
 }
-0
+
 
 function toggleEmailDetails(emailHash) {
     const details = document.getElementById(`emailDetails${emailHash}`);
     if (details) {
         const isExpanded = details.style.display === 'block';
         details.style.display = isExpanded ? 'none' : 'block';
-        
         if (!isExpanded) {
             expandedEmails.add(emailHash);
         } else {
@@ -631,6 +680,10 @@ function forwardEmail(emailId,sender,subject,date,body) {
 }
 
 function sendForward() {
+    if (emailArray.length === 0) {
+            showAlert('Email IDs are needed before sending or forwarding.');
+            return;
+    }
     var emails = emailArray
     var subject = document.getElementById('forwardSubject').value;
     var body = document.getElementById('forwardMessage').value;
@@ -714,6 +767,67 @@ function deleteEmail(index,hash) {
     expandedEmails.delete(index.toString());
     fetchEmails(); // Refresh the list or alternatively, update the UI directly if not refetching
 }
+
+function fetchMailboxPage() {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+        
+    function fetchDrivePage() {
+        window.location.href = '/drive';
+        fetch('http://localhost:8080/drive',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchHomePage() {
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    function logout() {
+        fetch('http://localhost:8080/logout', {
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                // Redirect to login page or any other page
+                window.location.href = '/login';
+            } else {
+                throw new Error('Logout failed');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+    });
+    }
 </script>
 </body>
 </html>
