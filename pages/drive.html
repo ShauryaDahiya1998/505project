@@ -61,7 +61,6 @@
         .service .fa-home { color: black; } /* Mail icon color */
         .service .fa-envelope { color: #28a745; } /* Mail icon color */
         .service .fa-hdd { color: #ffc107; } /* Drive icon color */
-        .service .fa-tools { color: purple; } /* Admin icon color */
         .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
 
         .unique-id {
@@ -114,7 +113,7 @@
             background-color: navy;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
         }
 
@@ -174,9 +173,54 @@
             word-wrap: break-word;
         }
 
+        .lightbox {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Lightbox Content Box */
+        .lightbox-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            animation-name: lightboxopen;
+            animation-duration: 0.4s;
+        }
+
+        .content-display-area {
+            width: 100%; /* Adjust width as needed */
+            height: auto; /* Height adjusts based on content */
+            padding: 10px;
+            background-color: #f8f8f8; /* Light grey background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .content-display-area img {
+            max-width: 100%;  /* Maximum width is 100% of the container */
+            max-height: 80vh; /* Maximum height is 80% of the viewport height */
+            object-fit: contain; /* Makes the image scale to maintain its aspect ratio without cropping */
+        }
+
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
             to {top: 0; opacity: 1}
+        }
+        @keyframes lightboxopen {
+            from {opacity: 0}
+            to {opacity: 1}
         }
     </style>
 </head>
@@ -194,13 +238,12 @@
             <div class="service-home" onclick="fetchHomePage()"><i class="fas fa-home"></i>Home</div>
             <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
             <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
-            <div class="service-admin"><i class="fas fa-tools"></i>Admin</div>
             <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
         </div>
     </div>
 
 <section class="drive-section" id="drive-section">
-    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp" onchange="handleFilesUpload()">
+    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp .mp3" onchange="handleFilesUpload()">
 </section>
 
 <button id="add-file-button">Add New File</button>
@@ -217,7 +260,21 @@
     </div>
 </div>
 
+<div id="imageLightbox" class="lightbox">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeLightbox()">&times;</span>
+        <div class="image-header"> <!-- Container for the filename header -->
+            <h3 id="imageName" style="color: white; background-color: navy; padding: 10px; margin: 0;">Filename Here</h3>
+        </div>
+        <div id="imageDisplayArea" class="content-display-area"></div>
+    </div>
+</div>
+
 <script>
+
+function closeLightbox() {
+    document.getElementById('imageLightbox').style.display = 'none';
+}
     document.addEventListener('DOMContentLoaded', () => {
         fetchUsername();
         fetchFiles();
@@ -240,6 +297,8 @@
             var reader = new FileReader();
             reader.onload = function(event) {
                 console.log(event.target.result)
+                data = JSON.stringify({ fileContent: event.target.result, fileName: file.name, fileType: file.type })
+                console.log(data);
                 fetch('http://localhost:8080/createFile', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -258,7 +317,7 @@
     const icon = document.createElement('div');
     icon.className = 'file-icon';
     const iconImg = document.createElement('i');
-    iconImg.className = 'fas ' + getFileIcon(fileType);
+    iconImg.className = 'fas ' + determineIcon(fileName);
     const text = document.createElement('div');
     text.textContent = fileName;
     icon.appendChild(iconImg);
@@ -273,8 +332,15 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log(decodeBase64(data.fileContent));
-                showModal(decodeBase64(data.fileContent),data.fileName,data.time);
+                console.log(data.fileType);
+                if(data.fileType.startsWith('image/'))
+                    displayImage(data.fileContent, data.fileName, data.time);
+                else if(data.fileType.startsWith('audio/'))
+                    displayAudio(data.fileContent, data.fileName, data.time);
+                // else if(data.fileType.startsWith('video/'))
+                //     displayVideo(data.fileContent, data.fileName, data.time);
+                else
+                    showModal(decodeBase64(data.fileContent),data.fileName,data.time);
             })
             .catch(error => console.log('Error selecting file:', error));
              icon.classList.toggle('selected');
@@ -282,6 +348,44 @@
 
     };
     return icon;
+}
+
+function showLightbox() {
+    document.getElementById('imageLightbox').style.display = 'block';
+}
+
+function displayImage(base64Url, fileName, time) {
+    var imgElement = document.createElement('img');
+    imgElement.src = base64Url;
+    imgElement.alt = fileName;
+    imgElement.title = "Uploaded on " + time;
+
+    var headerElement = document.getElementById('imageName');
+    headerElement.textContent = fileName;
+
+    var displayArea = document.getElementById('imageDisplayArea');
+    displayArea.innerHTML = ''; // Clear previous contents
+    displayArea.appendChild(imgElement); // Add the new image
+
+    showLightbox(); // Open the lightbox to show the image
+}
+
+function displayAudio(base64Url, fileName, time) {
+    var mediaElement = document.createElement('audio');
+
+    mediaElement.src = base64Url;
+    mediaElement.alt = fileName;
+    mediaElement.title = "Uploaded on " + time;
+    mediaElement.controls = true;
+
+    var headerElement = document.getElementById('imageName');
+    headerElement.textContent = fileName;
+
+    var displayArea = document.getElementById('imageDisplayArea');
+    displayArea.innerHTML = ''; // Clear previous contents
+    displayArea.appendChild(mediaElement); // Add the new image
+
+    showLightbox(); // Open the lightbox to show the image
 }
 
 function decodeBase64(base64String) {
@@ -310,16 +414,29 @@ function showModal(data, fileName,time) {
         }
     };
 }
-    function getFileIcon(fileType) {
-        if (fileType === 'application/pdf') {
-            return 'fa-file-pdf';
-        } else if (fileType === 'application/msword' || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            return 'fa-file-word';
-        } else if (fileType === 'text/plain') {
-            return 'fa-file-alt';
-        }
-        return 'fa-file';
+function determineIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch(extension) {
+        case 'pdf':
+            return 'fas fa-file-pdf';
+        case 'txt':
+            return 'fas fa-file-alt';
+        case 'doc':
+        case 'docx':
+            return 'fas fa-file-word';
+        case 'xls':
+        case 'xlsx':
+            return 'fas fa-file-excel';
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+            return 'fas fa-file-image';
+        case 'zip':
+            return 'fas fa-file-archive';
+        default:
+            return 'fas fa-file';
     }
+}
 
     function fetchFiles() {
         fetch('http://localhost:8080/getFiles', {

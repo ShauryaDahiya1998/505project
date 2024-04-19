@@ -284,6 +284,7 @@ class StorageOpsHandler : virtual public StorageOpsIf {
   }
 
 void get(std::string& _return, const std::string& row, const std::string& col) {
+    std::cout << row << col << std::endl;
     if(!valueExists(row,col))
         _return = "-ERR invalid row/column\r\n";
     else

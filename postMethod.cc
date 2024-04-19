@@ -285,17 +285,15 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string user = splitStrings(sessionResp,",")[0];
         string username = getUsernameFromEmail(user);
 
-        auto parsed = parseJsonLikeString(body);
+        auto parsed = nlohmann::json::parse(body);
         string fileName = parsed["fileName"];
+        cout << fileName  << endl;
         string fileContent = unescape(parsed["fileContent"]);
-
-        cout << fileName << " " << fileContent << endl;
-
+        string fileType = parsed["fileType"];
         string row = username+"-storage";
         string timestamp = getCurrentTimestamp();
-        string file = fileName + "\r\n" + timestamp + "\r\n" + fileContent;
+        string file = fileName + "\r\n" + timestamp + "\r\n" + fileType+ "\r\n" + fileContent;
         string col = sha256(fileName);
-        std::cout << "TEST " << row + " " + col + " " + file;
 
         auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
         kvsClient.put(row,col,file);
@@ -344,7 +342,8 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         vector<string> failComp = splitStrings(file,"\r\n");
         j["fileName"] = fileName; 
         j["time"] = failComp[1]; 
-        j["fileContent"] = failComp[2]; 
+        j["fileType"] = failComp[2]; 
+        j["fileContent"] = failComp[3]; 
         string jsonString = j.dump();
        
         response.content_type = "application/json";
@@ -379,16 +378,31 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         cout << sessionResp << endl;
         string userFrom = splitStrings(sessionResp,",")[0];
 
-        auto parsed = parseJsonLikeString(body);
-        string toEmail = parsed["email"];
-        string subject = parsed["subject"];
-        string body = unescape(parsed["body"]);
+        auto j = nlohmann::json::parse(body);
+
+        string toEmail = j["email"];
+        string subject = j["subject"];
+        string body = unescape(j["body"]);
+        map<string,string> attachments;
+        string attchHashes="";
+        for (const auto& item : j["attachments"]) {
+            string timestamp = getCurrentTimestamp();
+            string fileName = item["filename"];
+            string fileContent = item["content"];
+            string file = fileName + "\r\n" + timestamp + "\r\n" + fileContent;
+            string hash = sha256(item["filename"] );
+            attachments.insert(std::make_pair(hash,file));
+            if(attchHashes=="")
+                attchHashes = hash;
+            else
+                attchHashes = attchHashes + "," + hash;
+        }
 
         string username = getUsernameFromEmail(toEmail);
         string domain = getDomainFromEmail(toEmail);
         if(domain!="penncloud"){
             string email =  "Subject: " + subject + "\n" +  body; 
-            int success = smtpClient(parsed,domain,email);
+            // int success = smtpClient(parsed,domain,email);
             return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>sendEmail</h1>";
         }
         else{
@@ -409,6 +423,12 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
                 emailHashes = emailHashes + "," + col;
 
             kvsClient.put(row,"AllEmails",emailHashes);  
+
+            kvsClient.put(row,col+"-Attachments",attchHashes);
+             std::for_each(attachments.begin(), attachments.end(), [&kvsClient, &row, &col](const std::pair<std::string, std::string>& attachment) {
+                kvsClient.put(row, col + "-" + attachment.first, attachment.second);
+            });
+
             transport->close();
          
              std::cout<<"Details: "<<toEmail<<" "<<subject<<" "<<body<<endl;
@@ -459,7 +479,20 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         else{
             kvsClient.put(row,"AllEmails",newEmailHashes);
         }
-        kvsClient.deleteCell(row,emailHash);  
+        kvsClient.deleteCell(row,emailHash); 
+
+        string attachHash;
+        kvsClient.get(attachHash,row,emailHash+"-Attachments");
+        if(!attachHash.empty() && attachHash[0]!='-')
+        { 
+            vector<string> attachments = splitStrings(attachHash,",");
+            for (const auto& att : attachments){
+                kvsClient.deleteCell(row,emailHash+"-"+att);
+            }
+            kvsClient.deleteCell(row,emailHash+"-Attachments");
+        }
+
+
         transport->close();
         response.content_type = "application/json";
         response.message = "";
