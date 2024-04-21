@@ -285,6 +285,14 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string user = splitStrings(sessionResp,",")[0];
         string username = getUsernameFromEmail(user);
 
+        string index;
+        size_t pos = req.find("Content-Range: ");
+        if (pos != string::npos) {
+            pos += 15; // "Content-Range:" is 14 characters long
+            size_t endOfHeader = req.find('\r', pos);
+            index = req.substr(pos, endOfHeader - pos);
+        }
+
         auto parsed = nlohmann::json::parse(body);
         string fileName = parsed["fileName"];
         cout << fileName  << endl;
@@ -293,28 +301,31 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string row = username+"-storage";
         string timestamp = getCurrentTimestamp();
         string file = fileName + "\r\n" + timestamp + "\r\n" + fileType+ "\r\n" + fileContent;
-        string col = sha256(fileName);
+        string col = sha256(fileName)+"-"+index;
 
         auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
         kvsClient.put(row,col,file);
-        kvsClient.put(row,col+"-NameOnly",fileName);
-
-
-        string fileHashes;
-        kvsClient.get(fileHashes,row,"AllFiles");
-        if(fileHashes.empty() || fileHashes[0]=='-')
-            fileHashes = col;
-        else
-            fileHashes = fileHashes + "," + col;
-        kvsClient.put(row,"AllFiles",fileHashes); 
+        if(index=="0")
+        {
+            kvsClient.put(row,col+"-NameOnly",fileName);
+            string fileHashes;
+            kvsClient.get(fileHashes,row,"AllFiles");
+            if(fileHashes.empty() || fileHashes[0]=='-')
+                fileHashes = col;
+            else
+                fileHashes = fileHashes + "," + col;
+            kvsClient.put(row,"AllFiles",fileHashes);
+        } 
         transport->close();
 
         response.content_type = "application/json";
         response.message = "";
         response.sessionID = sessionID;
         string createResponseForPostRequest = response.createPostResponse(response);
+
         return createResponseForPostRequest;
     } else if (command == "/viewFile") {
+        cout << "VIEW FILE" << endl;
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;
         string sessionID = "1111";
@@ -329,23 +340,32 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string user = splitStrings(sessionResp,",")[0];
         string username = getUsernameFromEmail(user);
 
-        auto parsed = parseJsonLikeString(body);
+        auto parsed = nlohmann::json::parse(body);
+
         string fileName = parsed["fileName"];
+        cout << fileName << endl;
+        string chunk = parsed["chunkIndex"];
+        cout << chunk << endl;
         string row = username+"-storage";
-        string col = sha256(fileName);
+        string col = sha256(fileName)+"-"+chunk;
         string file;
         auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+        string time,filetype,filecontent;
+
         kvsClient.get(file,row,col);
-        transport->close();
-        std::cout << row + " " + col + " " + file;
+        cout << row << " " << col << " " << file << endl ;
         nlohmann::json j;
-        vector<string> failComp = splitStrings(file,"\r\n");
-        j["fileName"] = fileName; 
-        j["time"] = failComp[1]; 
-        j["fileType"] = failComp[2]; 
-        j["fileContent"] = failComp[3]; 
+        if(file[0] != '-'){
+            cout << " ";
+            vector<string> failComp = splitStrings(file,"\r\n");
+            j["fileName"] = fileName; 
+            j["time"] = failComp[1];
+            j["fileType"] = failComp[2];
+            j["fileContent"] = failComp[3];     
+        }   
         string jsonString = j.dump();
-       
+        cout << jsonString;
+        transport->close();
         response.content_type = "application/json";
         response.message = jsonString;
         response.sessionID = sessionID;   //How to get session ID here??????

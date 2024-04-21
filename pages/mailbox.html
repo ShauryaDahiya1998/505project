@@ -368,6 +368,9 @@
             border: 3px solid navy; /* Blue border */
             width: 60%; /* Adjust width as per your requirement */
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+            max-height: 90vh; /* Adjust as needed */
+            overflow-y: auto; /* Enable vertical scrolling */
+            word-wrap: break-word; /* Break long strings to prevent overflow */
         }
 
         #attachmentViewerModal .modal-header {
@@ -384,6 +387,10 @@
             font-size: 16px;
             border: 1px solid #000;
             line-height: 1.5; /* More readable line spacing */
+            max-height: 80vh; /* Adjust as needed */
+            overflow-y: auto; /* Enable vertical scrolling */
+            word-break: break-all; /* Ensure any word/string breaks to prevent overflow */
+            padding: 10px; /
         }
 
         #attachmentViewerModal .close {
@@ -644,7 +651,7 @@ function selectFile(fileId) {
     fetch('http://localhost:8080/viewFile', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ fileName: fileId })
+                body: JSON.stringify({ fileName: fileId, chunkIndex : "0"})
             })
         .then(response => response.json())
         .then(fileData => {
@@ -1053,7 +1060,11 @@ function openAttachment(fileName, fileContent) {
 
     modal.style.display = 'block';
     modalHeader.innerHTML = `<strong>${fileName}</strong> `;
-    modalContent.innerHTML = formattedContent; // Use innerHTML to accommodate HTML such as <br>
+    if (fileName.endsWith('.pdf')) {
+        modalContent.innerHTML = decodedContent.replace(/\n/g, '<br>'); // For plain text files
+    } else {
+        modalContent.innerHTML = decodedContent; // Directly for other types, may need more conditions
+    }
 }
 
 function closeModal(modalId) {

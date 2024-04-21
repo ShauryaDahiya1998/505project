@@ -225,6 +225,7 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
         string createResponseForPostRequest = response.createGetResponse(response);
         return createResponseForPostRequest;
     }  else if (command == "/getFiles") {
+        cout << "GET FILE"<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;
         string sessionID = "1111";

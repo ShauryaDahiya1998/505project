@@ -286,32 +286,71 @@ function closeLightbox() {
     }
 
     function handleFilesUpload() {
-        var files = document.getElementById('file-upload').files;
-        if (files.length === 0) return;
+    var files = document.getElementById('file-upload').files;
+    if (files.length === 0) return;
 
-        const section = document.getElementById('drive-section');
-        Array.from(files).forEach(file => {
-            const fileIcon = createFileIcon(file.name, file.type);
-            section.appendChild(fileIcon);
+    const section = document.getElementById('drive-section');
+    Array.from(files).forEach(file => {
+        const fileIcon = createFileIcon(file.name, file.type);
+        section.appendChild(fileIcon);
 
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                console.log(event.target.result)
-                data = JSON.stringify({ fileContent: event.target.result, fileName: file.name, fileType: file.type })
-                console.log(data);
-                fetch('http://localhost:8080/createFile', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ fileContent: event.target.result, fileName: file.name, fileType: file.type })
-                })
-                .then(response => response.json())
-                .then(data => console.log('File uploaded successfully', data))
-                .catch(error => console.log('Error uploading the file', error));
+        const chunkSize = 10240; 
+        let offset = 0; // Offset for slicing the file
+        idx = 0;
+
+        // Function to upload a chunk
+        function uploadChunk(chunkData, currentOffset,index) {
+            // Prepare data to be sent
+            const payload = JSON.stringify({
+                fileContent: chunkData,
+                fileName: file.name,
+                fileType: file.type,
+                filePosition: currentOffset
+            });
+
+            // console.log(chunkData);
+
+            fetch('http://localhost:8080/createFile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json','Content-Range': index},
+                body: payload
+            })
+            .then(response => 
+            {
+            response.json()})
+            .then(data => {
+                // console.log('Chunk uploaded successfully', data);
+                offset += chunkSize;
+                if (offset < file.size) {
+                    readNextChunk(index+1); // Read and send the next chunk
+                } else {
+                    console.log('File uploaded successfully');
+                }
+            })
+            .catch(error => console.log('Error uploading the chunk', error));
+        }
+
+        // Function to read the nxxt chunk and then upload it
+        function readNextChunk(index) {
+            console.log("CHink done ",index);
+            const fileReader = new FileReader();
+            const nextChunk = file.slice(offset, offset + chunkSize);
+            fileReader.onload = function(event) {
+                uploadChunk(event.target.result, offset,index);
             };
-            reader.readAsDataURL(file);
-        });
-        document.getElementById('file-upload').value = '';
-    }
+            fileReader.onerror = function(error) {
+                console.error('Error reading chunk', error);
+            };
+            fileReader.readAsDataURL(nextChunk);
+        }
+
+        // Start the upload process with the first chunk
+        readNextChunk(idx);
+    });
+
+    document.getElementById('file-upload').value = ''; // Reset the input after processing
+}
+
 
     function createFileIcon(fileName, fileType) {
     const icon = document.createElement('div');
@@ -325,27 +364,48 @@ function closeLightbox() {
     icon.onclick = function() {
         const isSelected = icon.classList.toggle('selected');
         if (isSelected) {
-            fetch('http://localhost:8080/viewFile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ fileName: fileName })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data.fileType);
-                if(data.fileType.startsWith('image/'))
-                    displayImage(data.fileContent, data.fileName, data.time);
-                else if(data.fileType.startsWith('audio/'))
-                    displayAudio(data.fileContent, data.fileName, data.time);
-                // else if(data.fileType.startsWith('video/'))
-                //     displayVideo(data.fileContent, data.fileName, data.time);
-                else
-                    showModal(decodeBase64(data.fileContent),data.fileName,data.time);
-            })
-            .catch(error => console.log('Error selecting file:', error));
-             icon.classList.toggle('selected');
+            let chunks = [];  
+            let fileType="" ;
+            let fileTime="";
+            function fetchNextChunk(chunkIndex) {
+                const payload = JSON.stringify({
+                    fileName: fileName,
+                    chunkIndex : String(chunkIndex)
+                });
+                fetch('http://localhost:8080/viewFile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: payload
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data!=null) {
+                        fileType = data.fileType;
+                        fileTime = data.time;
+                        // console.log("DATA", data.fileContent)
+                        // console.log(decodeBase64(data.fileContent));
+                    
+                        chunks.push(decodeBase64(data.fileContent));  
+                        chunkIndex++;  
+                        fetchNextChunk(chunkIndex);  
+                    }
+                    else{
+                        console.log(payload, chunks);
+                    let fullData =chunks.join('');
+                    // console.log(fullData);
+                    if(fileType.startsWith('image/'))
+                        displayImage(chunks, fileName, fileTime);
+                    else if(fileType.startsWith('audio/'))
+                        displayAudio(fullData, fileName, fileTime);
+                    else
+                        showModal(fullData,fileName,fileTime);
+                    }
+                })
+                .catch(error => console.log('Error selecting file:', error));
+            
+            }
+            fetchNextChunk(0); 
         }
-
     };
     return icon;
 }
@@ -354,9 +414,31 @@ function showLightbox() {
     document.getElementById('imageLightbox').style.display = 'block';
 }
 
-function displayImage(base64Url, fileName, time) {
+function base64ToBlob(byteCharacters, mimeType) {
+    // let byteCharacters = atob(base64);
+    let byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, {type: mimeType});
+}
+
+function displayImage(base64Chunks, fileName, time) {
+    let blobs = base64Chunks.map(chunk => base64ToBlob(chunk, 'image/jpeg'));
+    let fullImageBlob = new Blob(blobs, {type: 'image/jpeg'});
+    let imageUrl = URL.createObjectURL(fullImageBlob);
+
+
     var imgElement = document.createElement('img');
-    imgElement.src = base64Url;
+    imgElement.src = imageUrl;
     imgElement.alt = fileName;
     imgElement.title = "Uploaded on " + time;
 
@@ -388,8 +470,29 @@ function displayAudio(base64Url, fileName, time) {
     showLightbox(); // Open the lightbox to show the image
 }
 
+function findInvalidBase64Char(base64String) {
+    // Define the allowed base64 characters, including the '=' padding character
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+    // Iterate through each character in the base64 string
+    for (let i = 0; i < base64String.length; i++) {
+        const char = base64String[i];
+
+        // Check if the character does not match the allowed characters
+        if (!base64Regex.test(char)) {
+            return `Invalid character '${char}' found at position ${i}`;
+        }
+    }
+
+    // Return null if no invalid characters are found
+    return null;
+}
+
 function decodeBase64(base64String) {
     const base64Content = base64String.split(',')[1];
+    // console.log("CONTEN" , base64Content);
+    // const base64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+    // console.log("CHECK : ",base64Pattern.test(base64Content));
     return atob(base64Content);  // Decode base64 string
 }
 
