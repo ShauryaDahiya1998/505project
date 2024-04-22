@@ -38,7 +38,7 @@ using namespace std;
 
 
 #define PORT 8080
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 8000000
 
 
 // Variables to store the debug flag
@@ -221,6 +221,8 @@ void *worker(void *arg) {
   shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
   KvsCoordOpsClient client(protocol);
   transport->open();
+  bool readingChunks = false;
+
 
   while (true) {
     //Clear the buffer
@@ -244,30 +246,31 @@ void *worker(void *arg) {
     //If the data is received successfully, add to tempcommand and process the command
     tmpcommand = buffer;
     string content = "";
-    cout<<tmpcommand<<endl;
+    // cout<<tmpcommand<<endl;
     // check the type of the method, it is till the first space. Could be GET, POST, PUT, DELETE, HEAD
-    if (tmpcommand.find(" ") == string::npos) {
-      content = "404 Bad request";
-    } else {
-      size_t pos = tmpcommand.find(" ");
-      string method = tmpcommand.substr(0, pos);
-      if (method == "GET") {
-        content = getMethodHandler(tmpcommand, client);
-      } else if (method == "POST") {
-        // separate the body of post method from rest of the command
-        size_t pos = tmpcommand.find("\r\n\r\n");
-        string body = tmpcommand.substr(pos + 4);
-        content = postMethodhandler(tmpcommand, body, client);
-      } else if (method == "PUT") {
-        content = "PUT method";
-      } else if (method == "DELETE") {
-        content = "DELETE method";
-      } else if (method == "HEAD") {
-        content = "HEAD method";
-      } else {
+      if (tmpcommand.find(" ") == string::npos) {
         content = "404 Bad request";
+      } else {
+        size_t pos = tmpcommand.find(" ");
+        string method = tmpcommand.substr(0, pos);
+        if (method == "GET") {
+          content = getMethodHandler(tmpcommand, client);
+        } else if (method == "POST") {
+          // separate the body of post method from rest of the command
+          size_t pos = tmpcommand.find("\r\n\r\n");
+          string body = tmpcommand.substr(pos + 4);
+          content = postMethodhandler(tmpcommand, body, client);
+        } else if (method == "PUT") {
+          content = "PUT method";
+        } else if (method == "DELETE") {
+          content = "DELETE method";
+        } else if (method == "HEAD") {
+          content = "HEAD method";
+        } else {
+          content = "404 Bad request";
+        }
       }
-    }
+
     
     // string content = "Hello from the C++ server using pthread";
     // string httpResponse = "HTTP/1.1 200 OK\r\nDate: Fri, 31 Dec 1999 23:59:59 GMT\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(content.length()) + "\r\n\r\n" + content;//Hello from the C++ server using pthread!";
@@ -404,6 +407,21 @@ int main(int argc, char *argv[])
           exit(EXIT_FAILURE);
       }
   }
+
+  pthread_t smtpThread;
+    int result;
+
+    // Create the pthread to run the SMTP server
+    result = pthread_create(&smtpThread, NULL, startSMTPServer, NULL);
+    if (result != 0) {
+        std::cerr << "Failed to create the SMTP thread" << std::endl;
+        return -1;
+    }
+    pthread_detach(smtpThread);
+
+
+    // Continue with the rest of the main server initialization
+    std::cout << "Main server is starting..." << std::endl;
 
   //Create a socket
   int listen_fd = socket(AF_INET, SOCK_STREAM, 0);

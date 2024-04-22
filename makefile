@@ -6,7 +6,7 @@ LIBS = -lthrift -lssl -lcrypto -lresolv
 
 TARGET = myserver
 # Define source files
-SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc smtpclient.cc
+SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc smtpclient.cc smtp.cc
 
 KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp 
 
@@ -32,9 +32,9 @@ $(KVS_CLIENT_TARGET): $(KVS_CLIENT)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 # Rule to compile source files to object files
-%.o: %.cc
-	@echo "Compiling $<"
-	$(CXX) -c $< -o $@ -lpthread -w
+# %.o: %.cc
+# 	@echo "Compiling $<"
+# 	$(CXX) -c $< -o $@ -lpthread -w
 
 # Clean the built files
 clean:

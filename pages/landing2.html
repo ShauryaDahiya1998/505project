@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennCloud</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Styles -->
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: navy;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 25px; /* Increase padding to make the header bigger */
+            font-size: 1.5em; /* Larger font size */
+        }
+        .welcome-message {
+            font-size: 1em; /* Relative size to the navbar */
+            margin-right: 10px;
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+        }
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .service div{
+            margin-bottom: 20px; /* More space between services */
+            display: flex;
+            align-items: center;
+            font-size: 1.3em; /* Larger font size for service text */
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px;
+
+        }
+        .service i {
+            font-size: 1.8em; /* Larger icons */
+            margin-right: 15px; /* More space between icon and text */
+            width: 30px; /* Ensure the width of icons are the same */
+        }
+        .service .fa-cloud { color: whitesmoke; } /* Mail icon color */
+        .service .fa-home { color: black; } /* Mail icon color */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
+
+        .unique-id {
+            background-color: #ff5722; /* Orange */
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            word-wrap: break-word;
+            border-radius: 8px; /* Rounded corners */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        
+        <div><p>PennCloud</p></div>
+        <div>
+        <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="service">
+            <div class="service-home" onclick="fetchHomePage()"><i class="fas fa-home"></i>Home</div>
+            <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
+            <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
+            <!-- <div class="service-admin"><i class="fas fa-tools"></i>Admin</div> -->
+            <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+        </div>
+    </div>
+
+
+    <script>
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchUsername();
+        window.history.pushState({ page: "landing" }, "landing", "/landing");
+        console.log(window.location.pathname);   
+        document.getElementById('logoutButton').addEventListener('click', function() {
+        logout();
+        }); 
+        });
+
+    function logout() {
+        fetch('http://localhost:8080/logout', {
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                // Redirect to login page or any other page
+                window.location.href = '/login';
+            } else {
+                throw new Error('Logout failed');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+    });
+    }
+
+    function fetchUsername() {
+        fetch('http://localhost:8080/getUser', {
+            method: 'GET',
+            })
+        .then(response => response.json())
+        .then(username => {
+            renderUsername(username.user);
+        })
+        .catch(error => console.error('Error fetching emails:', error));
+    }
+
+    function renderUsername(username) {
+        console.log(username)
+        const usernameSpan = document.getElementById('username');
+        usernameSpan.textContent = username;
+    }
+
+    function fetchMailboxPage() {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+        
+    function fetchDrivePage() {
+        window.location.href = '/drive';
+        fetch('http://localhost:8080/drive',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchHomePage() {
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    </script>
+</body>
+</html>

@@ -2,28 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta viewport="width=device-width, initial-scale=1.0">
-    <title>Storage Drive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennCloud Storage</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #f1f3f4;
+         body, html {
             height: 100%;
-            position: relative;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .header-bar {
-            background-color: #4285f4;
+        .navbar {
+            background-color: navy;
             color: white;
-            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
+            padding: 25px; /* Increase padding to make the header bigger */
+            font-size: 1.5em; /* Larger font size */
+        }
+        .welcome-message {
+            font-size: 1em; /* Relative size to the navbar */
+            margin-right: 10px;
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+        }
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+        }
+        .service div{
+            margin-bottom: 20px; /* More space between services */
+            display: flex;
+            align-items: center;
+            font-size: 1.3em; /* Larger font size for service text */
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px;
+
+        }
+        .service i {
+            font-size: 1.8em; /* Larger icons */
+            margin-right: 15px; /* More space between icon and text */
+            width: 30px; /* Ensure the width of icons are the same */
+        }
+        .service .fa-cloud { color: teal; } /* Mail icon color */
+        .service .fa-home { color: black; } /* Mail icon color */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
+
+        .unique-id {
+            background-color: #ff5722; /* Orange */
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            word-wrap: break-word;
+            border-radius: 8px; /* Rounded corners */
         }
         .drive-section {
+            margin-left: 300px; 
             padding: 1rem;
             display: flex;
             flex-wrap: wrap;
@@ -59,10 +109,11 @@
             right: 10px;
             bottom: 10px;
             padding: 10px 20px;
-            background-color: #4285f4;
+            font-size: 18px;
+            background-color: navy;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
         }
 
@@ -92,12 +143,16 @@
 
         .modal-header {
             padding: 2px 16px;
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border-bottom: 1px solid #ddd;
+            font-size: 1em; /* Decreased font size for header */
         }
 
-        .modal-body {padding: 2px 16px;}
+        .modal-body {
+            padding: 2px 16px;
+            font-size: 1.5em; /* Increased font size for body */
+        }
 
         .close {
             color: white;
@@ -118,21 +173,77 @@
             word-wrap: break-word;
         }
 
+        .lightbox {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Lightbox Content Box */
+        .lightbox-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            animation-name: lightboxopen;
+            animation-duration: 0.4s;
+        }
+
+        .content-display-area {
+            width: 100%; /* Adjust width as needed */
+            height: auto; /* Height adjusts based on content */
+            padding: 10px;
+            background-color: #f8f8f8; /* Light grey background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .content-display-area img {
+            max-width: 100%;  /* Maximum width is 100% of the container */
+            max-height: 80vh; /* Maximum height is 80% of the viewport height */
+            object-fit: contain; /* Makes the image scale to maintain its aspect ratio without cropping */
+        }
+
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
             to {top: 0; opacity: 1}
+        }
+        @keyframes lightboxopen {
+            from {opacity: 0}
+            to {opacity: 1}
         }
     </style>
 </head>
 <body>
 
-<div class="header-bar">
-    <h1>PennCloud Storage</h1>
-    <p>Welcome, <span id="username">loading...</span>!</p>
-</div>
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+        <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="service">
+            <div class="service-home" onclick="fetchHomePage()"><i class="fas fa-home"></i>Home</div>
+            <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
+            <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
+            <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+        </div>
+    </div>
 
 <section class="drive-section" id="drive-section">
-    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp" onchange="handleFilesUpload()">
+    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp .mp3" onchange="handleFilesUpload()">
 </section>
 
 <button id="add-file-button">Add New File</button>
@@ -149,7 +260,21 @@
     </div>
 </div>
 
+<div id="imageLightbox" class="lightbox">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeLightbox()">&times;</span>
+        <div class="image-header"> <!-- Container for the filename header -->
+            <h3 id="imageName" style="color: white; background-color: navy; padding: 10px; margin: 0;">Filename Here</h3>
+        </div>
+        <div id="imageDisplayArea" class="content-display-area"></div>
+    </div>
+</div>
+
 <script>
+
+function closeLightbox() {
+    document.getElementById('imageLightbox').style.display = 'none';
+}
     document.addEventListener('DOMContentLoaded', () => {
         fetchUsername();
         fetchFiles();
@@ -161,36 +286,77 @@
     }
 
     function handleFilesUpload() {
-        var files = document.getElementById('file-upload').files;
-        if (files.length === 0) return;
+    var files = document.getElementById('file-upload').files;
+    if (files.length === 0) return;
 
-        const section = document.getElementById('drive-section');
-        Array.from(files).forEach(file => {
-            const fileIcon = createFileIcon(file.name, file.type);
-            section.appendChild(fileIcon);
+    const section = document.getElementById('drive-section');
+    Array.from(files).forEach(file => {
+        const fileIcon = createFileIcon(file.name, file.type);
+        section.appendChild(fileIcon);
 
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                console.log(event.target.result)
-                fetch('http://localhost:8080/createFile', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ fileContent: event.target.result, fileName: file.name, fileType: file.type })
-                })
-                .then(response => response.json())
-                .then(data => console.log('File uploaded successfully', data))
-                .catch(error => console.log('Error uploading the file', error));
+        const chunkSize = 10240; 
+        let offset = 0; // Offset for slicing the file
+        idx = 0;
+
+        // Function to upload a chunk
+        function uploadChunk(chunkData, currentOffset,index) {
+            // Prepare data to be sent
+            const payload = JSON.stringify({
+                fileContent: chunkData,
+                fileName: file.name,
+                fileType: file.type,
+                filePosition: currentOffset
+            });
+
+            // console.log(chunkData);
+
+            fetch('http://localhost:8080/createFile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json','Content-Range': index},
+                body: payload
+            })
+            .then(response => 
+            {
+            response.json()})
+            .then(data => {
+                // console.log('Chunk uploaded successfully', data);
+                offset += chunkSize;
+                if (offset < file.size) {
+                    readNextChunk(index+1); // Read and send the next chunk
+                } else {
+                    console.log('File uploaded successfully');
+                }
+            })
+            .catch(error => console.log('Error uploading the chunk', error));
+        }
+
+        // Function to read the nxxt chunk and then upload it
+        function readNextChunk(index) {
+            console.log("CHink done ",index);
+            const fileReader = new FileReader();
+            const nextChunk = file.slice(offset, offset + chunkSize);
+            fileReader.onload = function(event) {
+                uploadChunk(event.target.result, offset,index);
             };
-            reader.readAsDataURL(file);
-        });
-        document.getElementById('file-upload').value = '';
-    }
+            fileReader.onerror = function(error) {
+                console.error('Error reading chunk', error);
+            };
+            fileReader.readAsDataURL(nextChunk);
+        }
+
+        // Start the upload process with the first chunk
+        readNextChunk(idx);
+    });
+
+    document.getElementById('file-upload').value = ''; // Reset the input after processing
+}
+
 
     function createFileIcon(fileName, fileType) {
     const icon = document.createElement('div');
     icon.className = 'file-icon';
     const iconImg = document.createElement('i');
-    iconImg.className = 'fas ' + getFileIcon(fileType);
+    iconImg.className = 'fas ' + determineIcon(fileName);
     const text = document.createElement('div');
     text.textContent = fileName;
     icon.appendChild(iconImg);
@@ -198,26 +364,135 @@
     icon.onclick = function() {
         const isSelected = icon.classList.toggle('selected');
         if (isSelected) {
-            fetch('http://localhost:8080/viewFile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ fileName: fileName })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(decodeBase64(data.fileContent));
-                showModal(decodeBase64(data.fileContent),data.fileName,data.time);
-            })
-            .catch(error => console.log('Error selecting file:', error));
-             icon.classList.toggle('selected');
+            let chunks = [];  
+            let fileType="" ;
+            let fileTime="";
+            function fetchNextChunk(chunkIndex) {
+                const payload = JSON.stringify({
+                    fileName: fileName,
+                    chunkIndex : String(chunkIndex)
+                });
+                fetch('http://localhost:8080/viewFile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: payload
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data!=null) {
+                        fileType = data.fileType;
+                        fileTime = data.time;
+                        // console.log("DATA", data.fileContent)
+                        // console.log(decodeBase64(data.fileContent));
+                    
+                        chunks.push(decodeBase64(data.fileContent));  
+                        chunkIndex++;  
+                        fetchNextChunk(chunkIndex);  
+                    }
+                    else{
+                        console.log(payload, chunks);
+                    let fullData =chunks.join('');
+                    // console.log(fullData);
+                    if(fileType.startsWith('image/'))
+                        displayImage(chunks, fileName, fileTime);
+                    else if(fileType.startsWith('audio/'))
+                        displayAudio(fullData, fileName, fileTime);
+                    else
+                        showModal(fullData,fileName,fileTime);
+                    }
+                })
+                .catch(error => console.log('Error selecting file:', error));
+            
+            }
+            fetchNextChunk(0); 
         }
-
     };
     return icon;
 }
 
+function showLightbox() {
+    document.getElementById('imageLightbox').style.display = 'block';
+}
+
+function base64ToBlob(byteCharacters, mimeType) {
+    // let byteCharacters = atob(base64);
+    let byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, {type: mimeType});
+}
+
+function displayImage(base64Chunks, fileName, time) {
+    let blobs = base64Chunks.map(chunk => base64ToBlob(chunk, 'image/jpeg'));
+    let fullImageBlob = new Blob(blobs, {type: 'image/jpeg'});
+    let imageUrl = URL.createObjectURL(fullImageBlob);
+
+
+    var imgElement = document.createElement('img');
+    imgElement.src = imageUrl;
+    imgElement.alt = fileName;
+    imgElement.title = "Uploaded on " + time;
+
+    var headerElement = document.getElementById('imageName');
+    headerElement.textContent = fileName;
+
+    var displayArea = document.getElementById('imageDisplayArea');
+    displayArea.innerHTML = ''; // Clear previous contents
+    displayArea.appendChild(imgElement); // Add the new image
+
+    showLightbox(); // Open the lightbox to show the image
+}
+
+function displayAudio(base64Url, fileName, time) {
+    var mediaElement = document.createElement('audio');
+
+    mediaElement.src = base64Url;
+    mediaElement.alt = fileName;
+    mediaElement.title = "Uploaded on " + time;
+    mediaElement.controls = true;
+
+    var headerElement = document.getElementById('imageName');
+    headerElement.textContent = fileName;
+
+    var displayArea = document.getElementById('imageDisplayArea');
+    displayArea.innerHTML = ''; // Clear previous contents
+    displayArea.appendChild(mediaElement); // Add the new image
+
+    showLightbox(); // Open the lightbox to show the image
+}
+
+function findInvalidBase64Char(base64String) {
+    // Define the allowed base64 characters, including the '=' padding character
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+    // Iterate through each character in the base64 string
+    for (let i = 0; i < base64String.length; i++) {
+        const char = base64String[i];
+
+        // Check if the character does not match the allowed characters
+        if (!base64Regex.test(char)) {
+            return `Invalid character '${char}' found at position ${i}`;
+        }
+    }
+
+    // Return null if no invalid characters are found
+    return null;
+}
+
 function decodeBase64(base64String) {
     const base64Content = base64String.split(',')[1];
+    // console.log("CONTEN" , base64Content);
+    // const base64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+    // console.log("CHECK : ",base64Pattern.test(base64Content));
     return atob(base64Content);  // Decode base64 string
 }
 
@@ -242,16 +517,29 @@ function showModal(data, fileName,time) {
         }
     };
 }
-    function getFileIcon(fileType) {
-        if (fileType === 'application/pdf') {
-            return 'fa-file-pdf';
-        } else if (fileType === 'application/msword' || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            return 'fa-file-word';
-        } else if (fileType === 'text/plain') {
-            return 'fa-file-alt';
-        }
-        return 'fa-file';
+function determineIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch(extension) {
+        case 'pdf':
+            return 'fas fa-file-pdf';
+        case 'txt':
+            return 'fas fa-file-alt';
+        case 'doc':
+        case 'docx':
+            return 'fas fa-file-word';
+        case 'xls':
+        case 'xlsx':
+            return 'fas fa-file-excel';
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+            return 'fas fa-file-image';
+        case 'zip':
+            return 'fas fa-file-archive';
+        default:
+            return 'fas fa-file';
     }
+}
 
     function fetchFiles() {
         fetch('http://localhost:8080/getFiles', {
@@ -275,6 +563,67 @@ function showModal(data, fileName,time) {
             document.getElementById('username').textContent = username.user;
         })
         .catch(error => console.error('Error fetching user data:', error));
+    }
+
+    function fetchMailboxPage() {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+        
+    function fetchDrivePage() {
+        window.location.href = '/drive';
+        fetch('http://localhost:8080/drive',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchHomePage() {
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    function logout() {
+        fetch('http://localhost:8080/logout', {
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                // Redirect to login page or any other page
+                window.location.href = '/login';
+            } else {
+                throw new Error('Logout failed');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+    });
     }
 </script>
 </body>

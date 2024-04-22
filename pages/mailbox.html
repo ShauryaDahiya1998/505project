@@ -2,41 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta viewport="width=device-width, initial-scale=1.0">
-    <title>Interactive Email Inbox</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennCloud Mail</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #f1f3f4;
+       body, html {
             height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: navy;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 25px; /* Increase padding to make the header bigger */
+            font-size: 1.5em; /* Larger font size */
+            position: relative; 
+        }
+        .welcome-message {
+            font-size: 1em; /* Relative size to the navbar */
+            margin-right: 10px;
         }
         .sidebar {
-            background-color: #fff;
-            border-right: 1px solid #e0e0e0;
-            padding: 10px;
-            height: 100%;
-            width: 240px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
             position: fixed;
-            overflow-y: auto;
         }
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .service div{
+            margin-bottom: 20px; /* More space between services */
+            display: flex;
+            align-items: center;
+            font-size: 1.3em; /* Larger font size for service text */
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px;
+        }
+        .service i {
+            font-size: 1.8em; /* Larger icons */
+            margin-right: 15px; /* More space between icon and text */
+            width: 30px; /* Ensure the width of icons are the same */
+        }
+        .service .fa-cloud { color: whitesmoke; } /* Mail icon color */
+        .service .fa-home { color: black } /* Mail icon color */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-tools { color: purple; } /* Admin icon color */
+        .service .fa-sign-out-alt { color: royalblue; } /* Admin icon color */
+
+        .unique-id {
+            background-color: #ff5722; /* Orange */
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            word-wrap: break-word;
+            border-radius: 8px; /* Rounded corners */
+        }
+
         .compose-btn {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 12px 20px;
-            margin-bottom: 20px;
-            font-size: 16px;
+            font-size: 20px;
             cursor: pointer;
-            width: auto; /* Adjust width as needed */
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            position: fixed; /* Make it float */
-            bottom: 20px; /* Distance from bottom */
-            right: 20px; /* Distance from right */
-            z-index: 100; /* Ensure it's above other content */
+            border-radius: 7px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
         }
         .modal {
             display: none;
@@ -49,7 +96,7 @@
             overflow: auto;
             background-color: rgb(0,0,0);
             background-color: rgba(0,0,0,0.4);
-            padding-top: 60px;
+            padding-top: 80px;
         }
         .modal-content {
             background-color: #fefefe;
@@ -73,148 +120,120 @@
             cursor: pointer;
         }
         input[type="email"], textarea {
-        width: 98%; /* Increased width */
-        padding: 15px 20px; /* Increased padding */
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-    }
-
-    textarea {
-        height: 200px; /* Set a specific height for the textarea */
-    }
-    .compose-form .email-input-container,
-    .compose-form input[type="text"], 
-    .compose-form textarea {
-        padding: 10px; /* Adequate padding on all sides */
-        box-sizing: border-box; /* This ensures padding is included in the total width and height */
-        width: calc(100% - 23px); /* Calculate width, subtracting padding */
-        margin-bottom: 10px; /* Space between elements */
-        border: 1px solid #ccc; /* Border style */
-        border-radius: 4px; /* Rounded corners */
-    }
+            width: 98%; /* Increased width */
+            padding: 15px 20px; /* Increased padding */
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 200px; /* Set a specific height for the textarea */
+        }
+        .compose-form .email-input-container,
+        .compose-form input[type="text"], 
+        .compose-form textarea {
+            padding: 15px; /* Adequate padding on all sides */
+            box-sizing: border-box; /* This ensures padding is included in the total width and height */
+            width: calc(100% - 23px); /* Calculate width, subtracting padding */
+            margin-bottom: 10px; /* Space between elements */
+            border: 1px solid #ccc; /* Border style */
+            border-radius: 4px; /* Rounded corners */
+        }
         .compose-form button {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 10px 15px;
-            font-size: 14px;
+            font-size: 18px;
             cursor: pointer;
             border-radius: 4px;
         }
         .email-list {
-            margin-left: 0; /* Adjust according to sidebar width */
+            margin-left: 300px; /* Adjusted for sidebar width plus some extra space */
             padding: 20px;
+            overflow-y: auto;
+            height: calc(100vh - 50px); /* Adjust height if your navbar is different */
+            background: #f8f9fa;
         }
-        .email-item, .email-details {
+
+
+        .email-container {
             background-color: #fff;
-            padding: 12px;
-            margin: 5px 0;
+            margin-bottom: 10px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s ease-in-out;
         }
+
         .email-item {
-            cursor: pointer;
-            padding: 10px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
         }
+
+        .email-item:last-child {
+            border-bottom: none;
+        }
+
+        .email-item:hover {
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        
+        .email-main {
+            display: flex;
+            flex: 1;
+            justify-content: space-between;
+            overflow: hidden; /* Prevents content from spilling over */
+        }
+
+        .email-sender {
+            flex: 0 0 auto; /* The sender's name will not grow or shrink */
+            margin-right: 20px; /* Spacing between the sender's name and the subject */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-subject {
+            flex: 1; /* Allows the subject to grow and fill available space */
+            text-align: left;
+            margin-right: 20px; /* Spacing between the subject and the date */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-date {
+            flex: 0 0 auto; /* The date will not grow or shrink */
+            white-space: nowrap;
+        }
+
         .email-details {
-            display: none; /* Initially hidden */
+            display: none; /* Initially hidden, shown when clicked */
+            padding: 10px;
+            background-color: #f9f9f9;
         }
+
         .email-actions button {
-            background-color: #4285f4;
+            background-color: navy;
             color: white;
             border: none;
             padding: 6px 12px;
             margin-right: 8px;
-            font-size: 12px;
+            font-size: 16px;
             cursor: pointer;
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+
         .email-actions button:hover {
             background-color: #357ae8;
-        }
-
-        .email-container {
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 10px;
-        }
-
-        .email-item span {
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        .email-details {
-            padding: 10px;
-            background-color: #f9f9f9;
-        }
-        .email-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .email-sender, .email-subject, .email-date {
-            margin: 0;
-            white-space: nowrap; /* Prevents wrapping */
-        }
-
-        /* Optional: If you want the subject to truncate with ellipsis when too long */
-        .email-subject {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex-grow: 1;
-            margin: 0 10px; /* Ensures spacing around the subject */
-        }
-
-        .email-date {
-            font-style: italic;
-            color: #777;
-            font-size: 0.9em;
-        }
-        .readonly-but-not-grey {
-            background-color: white; /* Keeps the background looking normal */
-            color: black; /* Ensures text is easily readable */
-            border: 1px solid #ccc; /* Standard border to mimic enabled inputs */
-        }
-
-        .header-bar {
-            background-color: #4285f4;
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-bar h1 {
-            margin: 0; /* Remove default margin */
-            font-size: 24px; /* Adjust the size as needed */
-        }
-
-        .header-bar p {
-            margin: 0; /* Remove default margin */
-            font-size: 16px; /* Adjust the size as needed */
-        }
-        .email-input-container {
-            border: none;
-            padding: 5px 40px 5px 5px; /* Increase left padding */
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            width: 430px;
-        }
-
-        .email-input-container input[type="text"] {
-            margin: 0 0px;
-            width: 430px;
         }
 
         .email-tag {
@@ -245,21 +264,271 @@
             z-index: 1000; /* Make sure it appears above other content */
         }
 
-        .button-container {
-            text-align: right;  /* Aligns the button to the left */
-            margin-top: 10px;
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .email-list {
+                margin-left: 0;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: none;
+                padding: 10px;
+            }
+            .service div {
+                font-size: 1em; /* Adjust font size for smaller screens */
+            }
+            .service i {
+                font-size: 1.4em; /* Adjust icon size for smaller screens */
+            }
+            .compose-btn {
+                font-size: 16px;
+                padding: 10px;
+            }
+        }
+        .dropdown-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 16px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content button {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .dropdown-content button:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown-button:hover .dropdown-content {
+            display: block;
+}
+
+        /* General icon size adjustment */
+        i.fas {
+            font-size: 24px; /* Adjust this value to increase or decrease the size */
+            cursor: pointer; /* To indicate that the icon is clickable */
+            margin-right: 10px; /* Optional: adds space to the right of the icon */
+        }
+
+        /* Specific to email attachments to give some space and visual appeal */
+        .email-attachments i.fas {
+            color: red; /* Example: set a different color, optional */
+            margin-bottom: 5px; /* Adds space below the icon */
+        }
+        .attachments-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 0px 0px 10px 0;
+        }
+
+        .attachment-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .attachment-box i {
+            font-size: 24px; /* Larger icon */
+        }
+
+        .attachment-name {
+            font-size: 14px;
+        }
+
+        /* Specific styles for attachmentViewerModal */
+        #attachmentViewerModal .modal-content {
+            background-color: #fff;
+            margin: 5% auto; /* Centered in the page */
+            border: 3px solid navy; /* Blue border */
+            width: 60%; /* Adjust width as per your requirement */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+            max-height: 90vh; /* Adjust as needed */
+            overflow-y: auto; /* Enable vertical scrolling */
+            word-wrap: break-word; /* Break long strings to prevent overflow */
+        }
+
+        #attachmentViewerModal .modal-header {
+            padding: 10px 15px;
+            background-color: navy; /* Blue background */
+            color: white;
+            font-size: 20px;
+            border: 4px solid #000;
+            border-bottom: 1px solid #e5e5e5; /* Light grey border for separation */
+        }
+
+        #attachmentViewerModal .modal-body {
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #000;
+            line-height: 1.5; /* More readable line spacing */
+            max-height: 80vh; /* Adjust as needed */
+            overflow-y: auto; /* Enable vertical scrolling */
+            word-break: break-all; /* Ensure any word/string breaks to prevent overflow */
+            padding: 10px; /
+        }
+
+        #attachmentViewerModal .close {
+            color: #aaaaaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        #attachmentViewerModal .close:hover,
+        #attachmentViewerModal .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #fileIcons {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px;
+            margin-bottom: 20px; 
+
+        }
+
+        .panel-header {
+            background-color: navy;  /* Navy blue background */
+            color: white;            /* White text color */
+            padding: 10px 20px;      /* Padding for spacing inside the header */
+            margin: 0;               /* Remove default margin */
+            text-align: center;      /* Center the text */
+        }
+
+        .side-panel {
+            display: none; 
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 400px;
+            height: 100%;
+            background-color: #fff;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            overflow: auto; 
+            z-index: 1000;
+        }
+
+        .side-panel .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 25px;
+            cursor: pointer;
+        }
+
+        #filePanel {
+            display: none; 
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100%; 
+            background-color: #fff;
+            box-shadow: -1px 0 5px rgba(0,0,0,0.5);
+            overflow-y: auto; 
+            z-index: 1000;
+        }
+
+        #fileList li {
+            padding: 5px;
+            border-bottom: 1px solid #ccc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        #fileList li i {
+            margin-right: 10px; 
+        }
+
+        #fileList li:hover {
+            background-color: #f0f0f0;
+        }
+
+        #fileList li:last-child {
+            border-bottom: none;
+        }
+
+        #fileList i {
+            margin-right: 10px;
+        }
+
+        #fileList li:hover {
+            background-color: #f0f0f0;
+        }
+
+        .file-container {
+            display: flex;
+            align-items: center; /* Correct alignment should be center for vertical centering */
+            justify-content: flex-start;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        .file-container i {
+            font-size: 24px;
+            margin-right: 20px;
+        }
+
+        .file-container span {
+            flex-grow: 1;
+        }
+
+        button[type="button"] {
+            margin-top: 10px;  
         }
     </style>
 </head>
 <body>
-<!-- <div class="sidebar">
-   
-</div> -->
 
-<div class="header-bar">
-    <h1>PennCloud Email</h1>
-    <p>Welcome, <span id="username">loading...</span>!</p>
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+        <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
+        </div>
+    </div>
+
+<div class="sidebar">
+    <div class="service">
+        <div class="service-home" onclick="fetchHomePage()"><i class="fa fa-home"></i>Home</div>
+        <div class="service-email" onclick="fetchMailboxPage()"><i class="fas fa-envelope"></i>Mails</div>
+        <div class="service-drive" onclick="fetchDrivePage()"><i class="fas fa-hdd"></i>Drive</div>
+        <!-- <div class="service-admin"><i class="fas fa-tools"></i>Admin</div> -->
+        <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+    </div>
 </div>
+
+
 
 <div id="alertBox" class="alert-box" style="display: none;">This is an alert message!</div>
 
@@ -272,14 +541,35 @@
             <div id="composeToContainer" class="email-input-container">
                 <input type="text" id="composeTo" placeholder="Add recipients..." />
             </div>
-            
+
             <input type="text" placeholder="Subject" id="composeSubject">
             <textarea placeholder="Compose email" id="composeBody"></textarea>
-            <button type="button" onclick="sendEmail()">Send</button>
+
+            <!-- Moved file icons above the attachment button -->
+            <div id="fileIcons"></div>
+            
+            <div class="attachment-input-container">
+                <button type="button" onclick="toggleDropdown()">Add Attachment</button>
+                <div class="dropdown-content">
+                    <button type="button" onclick="document.getElementById('composeAttachment').click()">Browse and Attach File</button>
+                    <button type="button" onclick="openFilePanel()">Select from Drive</button>
+                </div>
+                <input type="file" multiple id="composeAttachment" style="display: none;" onchange="addAttachmentIcon()">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="button" onclick="sendEmail()" style="margin-top: -40px;">Send</button>
+            </div>
         </form>
     </div>
 </div>
 
+
+<div id="filePanel" class="side-panel">
+    <span class="close" onclick="closeFilePanel()">&times;</span>
+    <h2 class="panel-header">Select a File from Drive</h2>
+    <ul id="fileList" style="list-style: none;"></ul>
+</div>
 
 <div id="replyModal" class="modal">
     <div class="modal-content">
@@ -302,8 +592,17 @@
         </div>
         <input type="text" placeholder="Subject" id="forwardSubject" style="display: none;">
         <textarea id="forwardMessage" placeholder="Forwarded message will appear here"></textarea>
+        <div id="attachmentList"></div>
         <button type="button" onclick="sendForward()">Forward</button>
     </form>
+    </div>
+</div>
+
+<div id="attachmentViewerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('attachmentViewerModal')">&times;</span>
+        <div id="viewerModalHeader" class="modal-header"></div>
+        <div id="viewerModalContent" class="modal-body"></div>
     </div>
 </div>
 
@@ -315,6 +614,148 @@
 <script>
 let emailArray = [];
 
+function openFilePanel() {
+    document.getElementById('filePanel').style.display = 'block';
+    toggleDropdown();
+
+    fetch('http://localhost:8080/getFiles', { method: 'GET' })
+        .then(response => response.json())
+        .then(files => {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = ''; // Clear existing list items
+
+            files.forEach(file => {
+                const li = document.createElement('li');
+                const icon = document.createElement('i');
+                const fileExtension = file.name.split('.').pop();
+
+                icon.className = determineIcon(file.name); // Set icon based on file extension
+                li.appendChild(icon);
+
+                const textNode = document.createTextNode(' ' + file.name); // Add space before the name
+                li.appendChild(textNode);
+
+                li.onclick = () => {
+                    selectFile(file.name);
+                    document.getElementById('filePanel').style.display = 'none'; // Close panel after selection
+                };
+
+                fileList.appendChild(li);
+            });
+        })
+        .catch(error => console.error('Error fetching files:', error));
+}
+function selectFile(fileId) {
+
+    // Make API call to get file details
+    fetch('http://localhost:8080/viewFile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ fileName: fileId, chunkIndex : "0"})
+            })
+        .then(response => response.json())
+        .then(fileData => {
+            // Store file data for later use
+            console.log(fileData);
+            var modal = document.getElementById('composeModal');
+            addAttachmentIconToModal(fileData.fileName);
+
+            modal.fileData = fileData; 
+            console.log('File data stored in modal:', modal.fileData); // Optional: for verification
+            closeFilePanel(); // Close the panel upon selection
+        })
+        .catch(error => console.error('Error fetching file details:', error));
+}
+
+function addAttachmentIconToModal(fileName) {
+    const attachmentContainer = document.getElementById('fileIcons'); // Ensure this ID exists in your modal
+    attachmentContainer.innerHTML = ''
+    // Create a container for each file's icon and name
+    var fileContainer = document.createElement('div');
+    fileContainer.className = 'file-container';
+    fileContainer.style.display = 'flex';
+    fileContainer.style.alignItems = 'center'; // Updated to 'center' from 'left' to correctly align items vertically
+    fileContainer.style.justifyContent = 'flex-start';
+    fileContainer.style.marginBottom = '10px';
+    fileContainer.style.border = '1px solid #ccc';
+    fileContainer.style.padding = '10px';
+
+    // Create the icon element
+    var icon = document.createElement('i');
+    const iconClass = determineIcon(fileName); // Uses determineIcon to set the icon class
+    icon.className = iconClass + ' fa-fw'; // 'fa-fw' fixes width
+    icon.style.fontSize = '24px'; // Icon size
+    icon.style.marginRight = '10px'; // Space between icons
+
+    // Create and append the text node for the filename
+    var textSpan = document.createElement('span');
+    textSpan.textContent = ' ' + fileName;
+    textSpan.style.flexGrow = '1';
+
+    // Append icon and text to the file container
+    fileContainer.appendChild(icon);
+    fileContainer.appendChild(textSpan);
+
+    // Append the file item container to the main attachment container
+    attachmentContainer.appendChild(fileContainer);
+}
+
+function closeFilePanel() {
+    document.getElementById('filePanel').style.display = 'none';
+}
+
+function toggleDropdown() {
+    var dropdownContent = document.querySelector('.dropdown-content');
+    if (dropdownContent.style.display === 'block') {
+        dropdownContent.style.display = 'none';
+    } else {
+        dropdownContent.style.display = 'block';
+    }
+}
+
+function addAttachmentIcon() {
+    var dropdownContent = document.querySelector('.dropdown-content');
+    if (dropdownContent.style.display === 'block') {
+        dropdownContent.style.display = 'none';
+    }
+
+    var input= document.getElementById('composeAttachment');
+    var container = document.getElementById('fileIcons');
+    container.innerHTML = ''; // Clear existing icons
+
+    for (var i = 0; i < input.files.length; i++) {
+        var file = input.files[i];
+        var iconClass = determineIcon(file.name);
+
+        // Create a container for each file
+        var fileContainer = document.createElement('div');
+        fileContainer.className = 'file-container';
+        fileContainer.style.display = 'flex';
+        fileContainer.style.alignItems = 'left';
+        fileContainer.style.justifyContent = 'flex-start';
+        fileContainer.style.marginBottom = '10px';
+        fileContainer.style.border = '1px solid #ccc';
+        fileContainer.style.padding = '10px';
+
+        // Create the icon element
+        var icon = document.createElement('i');
+        icon.className = iconClass + ' fa-fw'; // 'fa-fw' fixes width
+        icon.style.fontSize = '24px'; // Icon size
+        icon.style.marginRight = '10px'; // Space between icons
+
+        // Create the text span for the filename
+        var textSpan = document.createElement('span');
+        textSpan.textContent = file.name;
+        textSpan.style.flexGrow = '1';
+
+        // Append icon and text to the file container
+        fileContainer.appendChild(icon);
+        fileContainer.appendChild(textSpan);
+
+        // Append the file container to the main container
+        container.appendChild(fileContainer);
+    }
+}
 
 function setupEmailInputListener(inputId,container) {
     const inputElement = document.getElementById(inputId);
@@ -361,54 +802,106 @@ function showAlert(message) {
 
 
     function sendEmail() {
-        if (emailArray.length === 0) {
-            showAlert('Email IDs are needed before sending or forwarding.');
-            return;
-        }
+    if (emailArray.length === 0) {
+        showAlert('Email IDs are needed before sending or forwarding.');
+        return;
+    }
 
-        var emails = emailArray;
-        var subject = document.getElementById('composeSubject').value;
-        var body = document.getElementById('composeBody').value;
-        emails.forEach(email => {
-    
+    var emails = emailArray;
+    var subject = document.getElementById('composeSubject').value;
+    var body = document.getElementById('composeBody').value;
+    var attachmentFiles = document.getElementById('composeAttachment').files;
+    var modal = document.getElementById('composeModal');
+
+    if (modal.fileData) {
+
+        const files = [];
+        console.log(modal.fileData.fileContent);
+        const extractedText = modal.fileData.fileContent.split('base64,')[1];
+        const blob = base64ToBlob(extractedText, 'application/octet-stream'); 
+        const file = new File([blob], modal.fileData.fileName, {
+            type: 'application/octet-stream' 
+        });
         
-        const data = { email: email, subject: subject, body: body};
-        console.log(JSON.stringify(data))
+        files.push(file);
 
-        fetch('http://localhost:8080/sendEmail', {
+        console.log('File added to array:', file);
+        console.log('Updated files array:', files);
+        
+        emails.forEach(email => {
+            readFilesAndSend(email, subject, body, files);
+        });
+    }
+    else{
+        console.log("Atta");
+        console.log(attachmentFiles)
+        emails.forEach(email => {
+            readFilesAndSend(email, subject, body, attachmentFiles);
+        });
+    }
+}
+
+function readFilesAndSend(email, subject, body, files) {
+    console.log(files);
+    let attachments = [];
+    let readers = [];
+
+    // Read each file as base64
+    Array.from(files).forEach(file => {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            attachments.push({
+                filename: file.name,
+                content: e.target.result.split(',')[1], // Split to remove the data:*/*;base64, prefix
+                type: file.type
+            });
+
+            // Check if all files are read
+            if (attachments.length === files.length) {
+                sendEmailWithData(email, subject, body, attachments);
+            }
+        };
+        readers.push(reader.readAsDataURL(file));
+    });
+
+    // If no files to attach, send immediately
+    if (files.length === 0) {
+        sendEmailWithData(email, subject, body, attachments);
+    }
+}
+
+function sendEmailWithData(email, subject, body, attachments) {
+    const data = {
+        email: email,
+        subject: subject,
+        body: body,
+        attachments: attachments
+    };
+
+    console.log(data);
+    fetch('http://localhost:8080/sendEmail', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
-        })
-        .then(response => response.json())
-        .then(data => {
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.message === "Error") {
-            alert("Error")
+            alert("Error");
         } else {
             window.location.href = '/mailbox';
-            fetch('http://localhost:8080/mailbox', {
-            method: 'GET',
-            })
-            .then(response => response.json())
-            .then(data => {
             console.log('Success:', data);
-            })
-            .catch((error) => {
-            console.error('Error:', error);
-            // showPopup('An error occurred. Please try again.', false, "Error Occurred");
-            });
         }
-        })
-        .catch((error) => {
+    })
+    .catch((error) => {
         console.error('Error:', error);
-        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
-        });
-        });
-        emailArray = []; 
-        closeComposeModal();
-    }
+    });
+
+    emailArray = [];
+    closeComposeModal();
+}
 
     window.onclick = function(event) {
         if (event.target == document.getElementById('composeModal')) {
@@ -446,7 +939,7 @@ function showAlert(message) {
     setupEmailInputListener('composeTo','composeToContainer');
     setupEmailInputListener('forwardToEmail','forwardToContainer');
 
-    setInterval(fetchEmails, 2000);
+    //  setInterval(fetchEmails, 2000); 
 
 
     document.getElementById('emailList').addEventListener('click', function(event) {
@@ -467,61 +960,138 @@ function unformatEmailBody(bodyText) {
     return bodyText.replace(/<br\s*\/?>/gi, '\n');
 }
 
-
 function renderEmails(emails) {
     const emailList = document.getElementById('emailList');
     emailList.innerHTML = ''; // Clear existing content
+
+    attMap ={};
     emails.forEach((email, index) => {
         const emailDiv = document.createElement('div');
         emailDiv.classList.add('email-container');
-        emailDiv.setAttribute('data-index', index); // Keep the index for reference if needed
-        emailDiv.setAttribute('data-email-hash', email.hash); // Store the email's unique hash as a data attribute
+        emailDiv.setAttribute('data-index', index);
+        emailDiv.setAttribute('data-email-hash', email.hash);
 
-        const senderName = email.from.split('@')[0];
-        const dateTime = email.time; // Format as needed
-
-        // Building the HTML structure
-        emailDiv.innerHTML = `
+        let innerHTML = `
             <div class="email-item" data-index="${index}" onclick="toggleEmailDetails('${email.hash}')">
                 <div class="email-main">
-                    <span class="email-sender"><strong>${senderName}</strong></span>
+                    <span class="email-sender"><strong>${email.from.split('@')[0]}</strong></span>
                     <span class="email-subject">${email.subject}</span>
-                    <span class="email-date">${dateTime}</span>
+                    <span class="email-date">${email.time}</span>
                 </div>
             </div>
             <div class="email-details" id="emailDetails${email.hash}" style="display: none;">
                 <p><strong>From:</strong> ${email.from}</p>
-                <p>${formatEmailBody(email.body)}</p>
-                <div class="email-actions">
-                    <button onclick="event.stopPropagation(); replyEmail('${email.hash}','${email.from}','${email.subject}');">Reply</button>
-                    <button onclick="event.stopPropagation(); forwardEmail('${email.hash}','${email.from}','${email.subject}','${email.time}','${formatEmailBody(email.body)}');">Forward</button>
-                    <button onclick="event.stopPropagation(); deleteEmail('${index}','${email.hash}', this);">Delete</button>
-                </div>
-            </div>
-        `;
+                <p>${formatEmailBody(email.body)}</p>`;
 
-        emailList.appendChild(emailDiv);
+        // Attachments handling with a heading and boxed layout
+        attachmentsJson = []; 
 
-        // Automatically expand emails that have been previously expanded
-        if (expandedEmails.has(email.hash)) { // Assume expandedEmails now tracks email hashes
-            const details = document.getElementById(`emailDetails${email.hash}`);
-            details.style.display = 'block';
+        if (email.attachment && email.attachment.length > 0) {
+            innerHTML += `
+                <div class="email-attachments">
+                    <h4>Attachments:</h4>
+                    <div class="attachments-container">`; // Container for all attachments
+            email.attachment.forEach(attachment => {
+                attachmentsJson.push(JSON.stringify(attachment));
+                const iconClass = determineIcon(attachment.fileName);
+                innerHTML += `
+                    <div class="attachment-box" onclick="event.stopPropagation(); openAttachment('${attachment.fileName}', '${attachment.fileContent}');">
+                        <i class="${iconClass}" title="Click to open ${attachment.fileName}"></i>
+                        <span class="attachment-name">${attachment.fileName}</span>
+                    </div>
+                `;
+            });
+            innerHTML += `</div></div>`; // Close containers
         }
+        // Email actions
+        attachmentsJson2 = JSON.stringify(attachmentsJson);
+        let attachmentsJsonString = JSON.stringify(attachmentsJson);
+
+        emailDiv.dataset.attachments = attachmentsJson2; // Store JSON string in a data attribute
+        attMap[index] = emailDiv.dataset.attachments;
+        console.log("HERE" + attMap[index]);
+
+        
+        innerHTML += `
+                <div class="email-actions">
+                    <button onclick="event.stopPropagation(); replyEmail('${email.hash}', '${email.from}', '${email.subject}');">Reply</button>
+                    <button onclick="event.stopPropagation(); forwardEmail('${email.hash}', '${email.from}', '${email.subject}', '${email.time}', '${formatEmailBody(email.body)}', attMap['${index}']);">Forward</button>
+                    <button onclick="event.stopPropagation(); deleteEmail('${index}', '${email.hash}', this);">Delete</button>
+                </div>
+            </div>`; // Close email-details
+
+        emailDiv.innerHTML = innerHTML;
+        emailList.appendChild(emailDiv);
     });
 }
+function determineIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch(extension) {
+        case 'pdf':
+            return 'fas fa-file-pdf';
+        case 'txt':
+            return 'fas fa-file-alt';
+        case 'doc':
+        case 'docx':
+            return 'fas fa-file-word';
+        case 'xls':
+        case 'xlsx':
+            return 'fas fa-file-excel';
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+            return 'fas fa-file-image';
+        case 'zip':
+            return 'fas fa-file-archive';
+        default:
+            return 'fas fa-file';
+    }
+}
+
+
+function openAttachment(fileName, fileContent) {
+    // Decode base64 content
+    const decodedContent = atob(fileContent); // Assumes text content
+    const formattedContent = decodedContent.replace(/\n/g, '<br>');
+
+    const modal = document.getElementById('attachmentViewerModal');
+    const modalHeader = document.getElementById('viewerModalHeader');
+    const modalContent = document.getElementById('viewerModalContent');
+
+    modal.style.display = 'block';
+    modalHeader.innerHTML = `<strong>${fileName}</strong> `;
+    if (fileName.endsWith('.pdf')) {
+        modalContent.innerHTML = decodedContent.replace(/\n/g, '<br>'); // For plain text files
+    } else {
+        modalContent.innerHTML = decodedContent; // Directly for other types, may need more conditions
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking on window
+window.onclick = function(event) {
+    const modal = document.getElementById('attachmentModal');
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+
+
 function renderUsername(username) {
-    console.log(username)
     const usernameSpan = document.getElementById('username');
     usernameSpan.textContent = username;
 }
-0
+
 
 function toggleEmailDetails(emailHash) {
     const details = document.getElementById(`emailDetails${emailHash}`);
     if (details) {
         const isExpanded = details.style.display === 'block';
         details.style.display = isExpanded ? 'none' : 'block';
-        
         if (!isExpanded) {
             expandedEmails.add(emailHash);
         } else {
@@ -621,58 +1191,79 @@ function closeReplyModal() {
 
 }
 
-function forwardEmail(emailId,sender,subject,date,body) {
+function forwardEmail(emailId,sender,subject,date,body,attachmentsJson) {
+    console.log("HERE2" + attachmentsJson);
     console.log(`Forward email ID: ${emailId}`);
     document.getElementById('forwardModal').style.display = 'block';
     const originalMessage = "From: " + sender + "\n" + "Date: " + date + "\n" + "Subject: " + subject + "\nTo: dummy" + "\n\n" + unformatEmailBody(body);
     document.getElementById('forwardMessage').value = "\n\n---Forwarded message---\n" + originalMessage;
     document.getElementById('forwardSubject').value =  subject;
+    const attachments = JSON.parse(attachmentsJson); 
+    displayAttachments(attachments);
+}
 
+function displayAttachments(attachments) {
+    const attachmentList = document.getElementById('attachmentList');
+    attachmentList.innerHTML = ''; 
+    attachments.forEach(attachment => {
+        const attachmentsParsed = JSON.parse(attachment); 
+        const entry = document.createElement('div');
+        entry.classList.add('attachment-entry');
+        entry.setAttribute('data-file-content', attachmentsParsed.fileContent); // Storing base64 file content
+        entry.setAttribute('data-file-name', attachmentsParsed.fileName); // Storing file name
+        const iconClass = determineIcon(attachmentsParsed.fileName);
+        entry.innerHTML = `<i class="${iconClass}" style="color: red;"></i> ${attachmentsParsed.fileName}`;
+        attachmentList.appendChild(entry);
+    });
 }
 
 function sendForward() {
+    if (emailArray.length === 0) {
+            showAlert('Email IDs are needed before sending or forwarding.');
+            return;
+    }
     var emails = emailArray
     var subject = document.getElementById('forwardSubject').value;
     var body = document.getElementById('forwardMessage').value;
 
-    console.log(emails);
-    
-    emails.forEach(email => {
-    const data = { email: email, subject:subject, body: body};
-    fetch('http://localhost:8080/sendEmail', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-    })
-    .then(response => response.json())
-    .then(data => {
-    if (data.message === "Error") {
-        alert("Error")
-    } else {
-        window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox', {
-        method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-        console.log('Success:', data);
-        })
-        .catch((error) => {
-        console.error('Error:', error);        // showPopup('An error occurred. Please try again.', false, "Error Occurred");
 
+    const entries = document.querySelectorAll('.attachment-entry');
+    const files = [];
+
+    entries.forEach(entry => {
+        const fileName = entry.getAttribute('data-file-name');
+        const base64Content = entry.getAttribute('data-file-content');
+        
+        // Convert base64 to Blob
+        const blob = base64ToBlob(base64Content, 'application/octet-stream'); // Adjust the MIME type as needed
+        const file = new File([blob], fileName, {
+            type: 'application/octet-stream' // Adjust the MIME type based on actual file type
         });
-    }
-    })
-    .catch((error) => {
-    console.error('Error:', error);
-    // showPopup('An error occurred. Please try again.', false, "Error Occurred");
+
+        files.push(file);
     });
+
+    // Now you have an array of File objects similar to a FileList
+    console.log(files);
+
+
+    emails.forEach(email => {
+        readFilesAndSend(email, subject, body, files);
     });
+
     emailArray = [];   
     closeForwardModal();
-    // Implement the reply functionality
+}
+
+function base64ToBlob(base64, type = 'application/octet-stream') {
+    console.log(base64);
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes.buffer], { type: type });
 }
 
 function deleteEmail(index,hash) {
@@ -714,6 +1305,68 @@ function deleteEmail(index,hash) {
     expandedEmails.delete(index.toString());
     fetchEmails(); // Refresh the list or alternatively, update the UI directly if not refetching
 }
+
+function fetchMailboxPage() {
+        window.location.href = '/mailbox';
+        fetch('http://localhost:8080/mailbox',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+        
+    function fetchDrivePage() {
+        window.location.href = '/drive';
+        fetch('http://localhost:8080/drive',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchHomePage() {
+        window.location.href = '/landing';
+        fetch('http://localhost:8080/landing',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    function logout() {
+        fetch('http://localhost:8080/logout', {
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                // Redirect to login page or any other page
+                window.location.href = '/login';
+            } else {
+                throw new Error('Logout failed');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+    });
+    }
+
 </script>
 </body>
 </html>

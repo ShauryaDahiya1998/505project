@@ -3,235 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PennCloud - Your Personal Cloud Space</title>
-    <!-- Link to Font Awesome -->
+    <title>PennCloud</title>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Styles -->
     <style>
-        body {
+        body, html {
+            height: 100%;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            color: #343a40;
         }
-
         .navbar {
             background-color: #007bff;
             color: white;
-            text-align: center;
-            padding: 1rem 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            font-size: 1.5em; /* Larger font size */
         }
-
-        .logo {
-            font-family: 'Arial Black', sans-serif;
-            font-size: 2.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px; /* Wider sidebar */
+            height: 100vh; /* Full-height */
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
-
-        .container {
+        .main-content {
+            margin-left: 250px; /* Same as the width of the sidebar */
+            padding: 0px 10px;
+            background: #f8f9fa;
+            height: calc(100vh - 84px); /* Full-height minus navbar height */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: calc(100vh - 100px);
-            text-align: center;
-            padding-top: 2px;
         }
-
-        .services {
+        .service, .logout-button {
             display: flex;
-            justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em; /* Adjusted font size for service text */
         }
-
-        .service {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 20px;
-            width: 200px;
-            height: 200px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            background-color: #fff;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none; 
+        .service i, .logout-button i {
+            font-size: 1.5em; /* Smaller icons */
+            margin-right: 15px;
         }
-
-        .service:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-
-        .service-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            color: #007bff;
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            margin: 0;
-            color: #007bff;
-        }
-
-        footer {
-            background-color: #343a40;
-            color: white;
-            text-align: center;
-            padding: 1rem;
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-        }
-
-        .footer-logo {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-
-        .drive-section {
-            display: none;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .drive-section .upload-area {
-            margin: 1rem 0;
-            padding: 1rem;
-            border: 2px dashed #007BFF;
-            color: #007BFF;
+        /* Colors for icons */
+        .service .fa-envelope { color: #28a745; } /* Mail icon color */
+        .service .fa-hdd { color: #ffc107; } /* Drive icon color */
+        .service .fa-tools { color: #17a2b8; } /* Admin icon color */
+        .logout-button {
+            color: #dc3545; /* Logout icon and text color */
             cursor: pointer;
         }
-
-        .drive-section .file-list {
-            margin-top: 1rem;
+        .logout-button i {
+            font-size: 2em; /* Slightly larger icon for visibility */
         }
-
-        .drive-section .file-list ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        .drive-section .file-list li {
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        /* Additional button style for Drive */
-        .nav-links li button, .nav-links li a {
-            padding: 0.5rem 1rem;
-            margin: 0 0.5rem;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 0.3rem;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .nav-links li button:hover, .nav-links li a:hover {
-            background-color: #0056b3;
+        .unique-id {
+            /* Style for unique ID box (if needed) */
         }
     </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar">
-            <div class="logo">PennCloud</div>
-            <ul class="nav-links">
-                <li><button id="logoutButton">Logout</button></li>
-            </ul>
-            
-        </nav>
-    </header>
+    <!-- Navigation Bar -->
+    <div class="navbar">
+        <div>PennCloud</div>
+        <div>Welcome, Sukriti</div>
+    </div>
 
-
-    <section class="services" id="services-section">
-        <div class="service webmail" onclick="fetchMailboxPage()">
-            <i class="fas fa-envelope service-icon"></i>
-            <h2>Webmail Service</h2>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Sidebar content -->
+        <div>
+            <div class="service"><i class="fas fa-envelope fa-10x"></i> Mails</div>
+            <div class="service"><i class="fas fa-hdd"></i>Drive</div>
+            <div class="service"><i class="fas fa-tools"></i>Admin</div>
         </div>
-   
+        <!-- Logout button at the bottom of the sidebar -->
+        <div class="logout-button" id="logout">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+        </div>
+    </div>
 
-            <div class="service storage" onclick="fetchDrivePage()">
-                <i class="fas fa-hdd service-icon" ></i>
-                <h2>Web Storage Service</h2>
-            </div>
-      </section>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Your main content goes here -->
+    </div>
 
-    
-
-    <footer>
-        <div class="footer-logo"></div>
-    </footer>
-
+    <!-- JavaScript -->
     <script>
-
-        document.addEventListener('DOMContentLoaded', function() {
-            window.history.pushState({ page: "landing" }, "landing", "/landing");
-            console.log(window.location.pathname);   
-            
-            document.getElementById('logoutButton').addEventListener('click', function() {
-            logout();
-            }); 
-          });
-
-          function logout() {
-            fetch('http://localhost:8080/logout', {
-                method: 'GET',
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Redirect to login page or any other page
-                    window.location.href = '/login';
-                } else {
-                    throw new Error('Logout failed');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-            }
-        
-    
-    function fetchMailboxPage() {
-        window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox',{
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-        console.log('Success:', data);
-        })
-        .catch((error) => {
-        console.error('Error:', error);
-        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        // Event listener for logout
+        document.getElementById('logout').addEventListener('click', function() {
+            // Implement your logout logic here
+            console.log('User has logged out.');
+            // This is where you would typically handle the logout process
+            window.location.href = '/login'; // Redirect to login page
         });
-        }
-        
-    function fetchDrivePage() {
-            window.location.href = '/drive';
-            fetch('http://localhost:8080/drive',{
-                method: 'GET',
-            })
-            .then(response => response.json())
-            .then(data => {
-            console.log('Success:', data);
-            })
-            .catch((error) => {
-            console.error('Error:', error);
-            showPopup('An error occurred. Please try again.', false, "Error Occurred");
-            });
-            }
-
     </script>
-       
 </body>
 </html>

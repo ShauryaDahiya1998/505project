@@ -15,7 +15,7 @@ using namespace storage;
 using namespace std;
 
 string sendToLandingPage(string sessionId) {
-    ifstream ifs("./pages/landing.html");
+    ifstream ifs("./pages/landing2.html");
     string landingPage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
     HttpResponseCreator response;
     response.content_type = "text/html";
@@ -164,7 +164,8 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
             string email;
             auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
             kvsClient.get(email,row,str);
-            transport->close();
+            
+            std::cout << "EMAIL GOTTEN " << email << endl;
             vector<string> emailComp = splitString(email,"\r\n");
             nlohmann::json j;
             j["hash"] = str;
@@ -172,6 +173,24 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
             j["time"] = emailComp[1]; 
             j["subject"] = emailComp[2]; 
             j["body"] = emailComp[3]; 
+            string attachHash;
+            kvsClient.get(attachHash,row,str+"-Attachments");
+            if(!attachHash.empty() && attachHash[0]!='-')
+            {            
+                vector<string> attachments;
+                vector<nlohmann::json> attJsons;
+                attachments = splitString(attachHash,",");
+                nlohmann::json ja;
+                for (const auto& att : attachments){
+                    string attachment;
+                    kvsClient.get(attachment,row,str+"-"+att);
+                    vector<string> failComp = splitString(attachment,"\r\n");
+                    ja["fileName"] = failComp[0]; 
+                    ja["fileContent"] = failComp[2]; 
+                    attJsons.push_back(ja);
+                }
+                j["attachment"] = attJsons;
+            }
             string jsonString = j.dump();
             // responseJson[str] = j;
             sortedEmails.push_back(j);
@@ -180,6 +199,8 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
         sort(sortedEmails.begin(), sortedEmails.end(), [](const nlohmann::json& a, const nlohmann::json& b) {
             return a["time"] > b["time"]; 
         });
+                    transport->close();
+
         nlohmann::json responseJson = nlohmann::json(sortedEmails);
         string jsonString = responseJson.dump();
         response.content_type = "application/json";
@@ -204,6 +225,7 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
         string createResponseForPostRequest = response.createGetResponse(response);
         return createResponseForPostRequest;
     }  else if (command == "/getFiles") {
+        cout << "GET FILE"<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;
         string sessionID = "1111";
