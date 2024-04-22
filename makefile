@@ -1,4 +1,6 @@
-CXX = aarch64-linux-gnu-g++
+CXX = g++ # Windows (SAD) LINE
+# CXX = aarch64-linux-gnu-g++  MAC LINE
+
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -w
 LIBS = -lthrift -lssl -lcrypto -lresolv
 
@@ -8,7 +10,7 @@ SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc smtpc
 
 KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp 
 
-KVS_TARGET = kvs 
+KVS_TARGET = kvs
 
 KVS_CLIENT = client.cc gen-cpp/StorageOps.cpp
 
@@ -17,7 +19,7 @@ KVS_CLIENT_TARGET = client
 # Automatically generate a list of object files
 OBJECTS = $(SOURCES:.cc=.o)
 # Default target
-all: $(TARGET) $(KVS_TARGET) $)
+all: $(TARGET) $(KVS_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."

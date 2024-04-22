@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PennCloud</title>
+<style>
+  /* Add your CSS styling here */
+  body { font-family: Arial, sans-serif; }
+  .header { background-color: #f1f1f1; padding: 10px; text-align: center; }
+  .nav { display: flex; justify-content: space-around; }
+  .nav a { text-decoration: none; padding: 10px; }
+  .main { margin: 20px; }
+  .footer { background-color: #f1f1f1; position: absolute; bottom: 0; width: 100%; text-align: center; padding: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PennCloud</h1>
+  <div class="nav">
+    <a href="#">Home</a>
+    <a href="#">About</a>
+    <a href="#">Services</a>
+    <a href="#">Support</a>
+    <a href="#">Logout</a>
+  </div>
+</div>
+
+<div class="main">
+  <button onclick="createFolder()">Create Folder</button>
+  <input type="file" id="fileInput" multiple>
+  <button onclick="uploadFiles()">Upload Files</button>
+  <div id="fileList"></div>
+</div>
+
+<div class="footer">
+  <a href="#">Contact Us</a> | 
+  <a href="#">Privacy Policy</a> | 
+  <a href="#">Terms of Service</a>
+</div>
+
+<script>
+  // Add your JavaScript here
+  function createFolder() {
+    // Mock function to create a folder
+    console.log('Create folder function triggered');
+    // In actual implementation, you would have code to create a folder on the server
+  }
+
+  function uploadFiles() {
+    var files = document.getElementById('fileInput').files;
+    console.log('Files to upload:', files);
+    // In actual implementation, you would have code to upload files to the server
+  }
+
+  // This is just a placeholder for actual file upload handling
+  document.getElementById('fileInput').addEventListener('change', function() {
+    var fileList = document.getElementById('fileList');
+    fileList.innerHTML = ''; // Clear the list
+    for (var i = 0; i < this.files.length; i++) {
+      var li = document.createElement('li');
+      li.textContent = this.files[i].name;
+      fileList.appendChild(li);
+    }
+  });
+</script>
+
+</body>
+</html>
