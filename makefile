@@ -1,4 +1,4 @@
-CXX = aarch64-linux-gnu-g++
+CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -w
 LIBS = -lthrift -lssl -lcrypto -lresolv
 
@@ -21,7 +21,7 @@ all: $(TARGET) $(KVS_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."
-	$(CXX)  $(CXXFLAGS)  -o $(TARGET)  gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp $(OBJECTS)  -lpthread $(LIBS) -w
+	$(CXX) $(CXXFLAGS)  -o $(TARGET)  gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp $(OBJECTS)  -lpthread $(LIBS) -w
 
 $(KVS_TARGET): $(KVS_SERVER)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
