@@ -298,6 +298,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         cout << fileName  << endl;
         string fileContent = unescape(parsed["fileContent"]);
         string fileType = parsed["fileType"];
+        string folderName = parsed["folderName"];
         string row = username+"-storage";
         string timestamp = getCurrentTimestamp();
         string file = fileName + "\r\n" + timestamp + "\r\n" + fileType+ "\r\n" + fileContent;
@@ -305,16 +306,34 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
 
         auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
         kvsClient.put(row,col,file);
+        kvsClient.put(row,col+"-NameOnly",fileName);
         if(index=="0")
         {
-            kvsClient.put(row,col+"-NameOnly",fileName);
-            string fileHashes;
-            kvsClient.get(fileHashes,row,"AllFiles");
-            if(fileHashes.empty() || fileHashes[0]=='-')
-                fileHashes = col;
-            else
-                fileHashes = fileHashes + "," + col;
-            kvsClient.put(row,"AllFiles",fileHashes);
+            if (folderName == "root") {
+                string fileHashes;
+                kvsClient.get(fileHashes,row,"AllFiles");
+                if(fileHashes.empty() || fileHashes[0]=='-')
+                    fileHashes = col;
+                else
+                    fileHashes = fileHashes + "," + col;
+                kvsClient.put(row,"AllFiles",fileHashes);
+            } else {
+                string folderHashes;
+                
+                kvsClient.get(folderHashes,row,sha256(folderName));
+                vector<string> folderHashesSet = splitStrings(folderHashes,"\r\n");
+                if(folderHashesSet[3] == "NULL")
+                {
+                    folderHashesSet[3] = col;
+                }
+                else
+                {
+                    folderHashesSet[3] = folderHashesSet[3] + "," + col;
+                }
+                string newFolderHashes = folderHashesSet[0] + "\r\n" + folderHashesSet[1] + "\r\n" + folderHashesSet[2] + "\r\n" + folderHashesSet[3];
+                cout<<"New Folder Hashes: "<<newFolderHashes<<endl;
+                kvsClient.put(row,sha256(folderName),newFolderHashes);
+            }
         } 
         transport->close();
 
@@ -346,8 +365,47 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         cout << fileName << endl;
         string chunk = parsed["chunkIndex"];
         cout << chunk << endl;
+        string folderName = parsed["folderName"];
         string row = username+"-storage";
         string col = sha256(fileName)+"-"+chunk;
+
+        //check if the file exists in the folder or not
+        if (folderName == "root") {
+            string fileHashes;
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+            kvsClient.get(fileHashes,row,"AllFiles");
+            transport->close();
+            vector<string> fileHashSet = splitStrings(fileHashes,",");
+            if (find(fileHashSet.begin(), fileHashSet.end(), col) == fileHashSet.end() && chunk== "0") {
+                response.content_type = "application/json";
+                response.message = "{}";
+                response.sessionID = sessionID;   //How to get session ID here??????
+                string createResponseForPostRequest = response.createGetResponse(response);
+                return createResponseForPostRequest;
+            }
+        } else {
+            string folderHashes;
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+            kvsClient.get(folderHashes,row,sha256(folderName));
+            transport->close();
+            vector<string> folderHashesSet = splitStrings(folderHashes,"\r\n");
+            if(folderHashesSet[3] == "NULL" && chunk == "0")
+            {
+                response.content_type = "application/json";
+                response.message = "{}";
+                response.sessionID = sessionID;   //How to get session ID here??????
+                string createResponseForPostRequest = response.createGetResponse(response);
+                return createResponseForPostRequest;
+            }
+            vector<string> filesNames = splitStrings(folderHashesSet[3],",");
+            if (find(filesNames.begin(), filesNames.end(), col) == filesNames.end() && chunk == "0") {
+                response.content_type = "application/json";
+                response.message = "{}";
+                response.sessionID = sessionID;   //How to get session ID here??????
+                string createResponseForPostRequest = response.createGetResponse(response);
+                return createResponseForPostRequest;
+            }
+        }
         string file;
         auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
         string time,filetype,filecontent;
@@ -373,7 +431,236 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         return createResponseForPostRequest;
     }
     else if (command == "/createFolder") {
-        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>createFolder</h1>";
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionResp;
+        string sessionID = "1111";
+        if (cookieIndex != -1) {
+            sessionID = req.substr(cookieIndex + 18, 7);
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(sessionID,client));
+            kvsClient.get(sessionResp, sessionID, "1");
+            transport->close();
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
+        } 
+        cout << sessionResp << endl;
+        string user = splitStrings(sessionResp,",")[0];
+        string username = getUsernameFromEmail(user);
+        auto parsed = nlohmann::json::parse(body);
+        string folderName = parsed["folderName"];
+        cout << folderName  << endl;
+        string row = username+"-storage";
+        string timestamp = getCurrentTimestamp();
+        string fileType = "folder";
+        auto path = parsed["path"];
+
+        string folder = folderName + "\r\n" + timestamp + "\r\n" + fileType + "\r\n" + "NULL";
+        string col = sha256(folderName);
+
+        auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+        kvsClient.put(row,col,folder);
+        cout<<path.size()<<endl;
+        if (path.size() == 0) {
+            string folderHashes;
+            kvsClient.get(folderHashes,row,"root");
+            if (folderHashes.empty() || folderHashes[0] == '-') {
+                cout<<"THIS RAN AGAIN"<<endl;
+                folderHashes = col;
+            } else {
+                // remove the NULL from the end of the string
+                cout<<"AND THIS RAN"<<endl;
+                folderHashes = folderHashes + "," + col;
+            }
+            kvsClient.put(row,"root",folderHashes);
+        } else {
+            string folderHashes;
+            string folderNameHash = sha256(path[path.size()-1]);
+            kvsClient.get(folderHashes,row, folderNameHash);
+            if (folderHashes.empty() || folderHashes[0] == '-') {
+                folderHashes = col;
+            } else {
+                // remove the NULL from the end of the string if there is a NULL
+                if (folderHashes.substr(folderHashes.size() - 4) == "NULL") {
+                    folderHashes = folderHashes.substr(0, folderHashes.size() - 4);
+                }
+                folderHashes = folderHashes + "," + col;
+            }
+            kvsClient.put(row,folderNameHash,folderHashes);
+        }
+        transport->close();
+        response.content_type = "application/json";
+        response.message = "{}";
+        response.sessionID = sessionID;
+        string createResponseForPostRequest = response.createPostResponse(response);
+        return createResponseForPostRequest;
+        
+    } else if (command == "/fetchFolders") {
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionResp;
+        string sessionID = "1111";
+        if (cookieIndex != -1) {
+            sessionID = req.substr(cookieIndex + 18, 7);
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(sessionID,client));
+            kvsClient.get(sessionResp, sessionID, "1");
+            transport->close();
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
+        } 
+        cout << sessionResp << endl;
+        string user = splitStrings(sessionResp,",")[0];
+        string username = getUsernameFromEmail(user);
+        //parse the body
+        auto parsed = nlohmann::json::parse(body);
+        //the paresd content is in the form {"path":["folder1","folder2","folder3"]}
+        // make a vector of all the folders in the path
+        auto path = parsed["path"];
+        string row = username+"-storage";
+        auto [transport, kvsClient] =  getKVSClient(getWorkerIP(username+"-storage",client));
+        if (path.size() == 0) {
+            string folderHashes;
+            kvsClient.get(folderHashes,row,"root");
+            vector<string> folderHashSet = splitStrings(folderHashes,",");
+            vector<string> folderNames;
+            for(string hash : folderHashSet){
+                string folder;
+                kvsClient.get(folder,row,hash);
+                if(folder[0] != '-'){
+                    vector<string> failComp = splitStrings(folder,"\r\n");
+                    folderNames.push_back(failComp[0]);
+                }
+            }
+            string jsonString = nlohmann::json(folderNames).dump();
+            transport->close();
+            response.content_type = "application/json";
+            response.message = jsonString;
+            response.sessionID = sessionID;
+            string createResponseForPostRequest = response.createGetResponse(response);
+            return createResponseForPostRequest;
+        } else {
+            string folderHashes;
+            string folderNameHash = sha256(path[path.size()-1]);
+            kvsClient.get(folderHashes,row,folderNameHash);
+            vector<string> folderHash = splitStrings(folderHashes,"\r\n");
+            // last element has all the folder hashes
+            vector<string> folderHashSet = splitStrings(folderHash[3],",");
+            if (folderHashSet[0] == "NULL") {
+                transport->close();
+                response.content_type = "application/json";
+                response.message = "{}";
+                response.sessionID = sessionID;
+                string createResponseForPostRequest = response.createGetResponse(response);
+                return createResponseForPostRequest;
+            }
+            vector<string> folderNames;
+            for(string hash : folderHashSet){
+                string folder;
+                kvsClient.get(folder,row,hash);
+                if(folder[0] != '-'){
+                    vector<string> failComp = splitStrings(folder,"\r\n");
+                    if (failComp[2] == "folder") {
+                        folderNames.push_back(failComp[0]);
+                    }
+                }
+            }
+            string jsonString = nlohmann::json(folderNames).dump();
+            transport->close();
+            response.content_type = "application/json";
+            response.message = jsonString;
+            response.sessionID = sessionID;
+            string createResponseForPostRequest = response.createGetResponse(response);
+            return createResponseForPostRequest;
+        }
+        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>fetchFolders</h1>";
+    } else if (command == "/getFiles") {
+        cout << "GET FILE"<<endl;
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionResp;
+        string sessionID = "1111";
+        if (cookieIndex != -1) {
+            sessionID = req.substr(cookieIndex + 18, 7);
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(sessionID,client));
+            kvsClient.get(sessionResp,sessionID,"1");
+            transport->close();
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
+        } 
+        cout << sessionResp << endl;
+        string user = splitStrings(sessionResp,",")[0];
+        string username = getUsernameFromEmail(user);
+
+        string row = username+"-storage"; 
+        string fileHashes;
+        // parse body, it has foldername
+        auto parsed = nlohmann::json::parse(body);
+        auto folderName = parsed["folderName"];
+        auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+        if (folderName == "root") {
+            kvsClient.get(fileHashes,row,"AllFiles");
+            transport->close();
+            vector<string> allFiles;
+            vector<nlohmann::json> sortedFiles;
+
+            if(!fileHashes.empty() && fileHashes[0]!='-')
+                allFiles = splitStrings(fileHashes,",");
+            for (const auto& str : allFiles) {
+                string file;
+                auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient.get(file,row,str+"-NameOnly");
+                cout<<"HERE IS THE FILE for root->" << file << endl;
+                transport->close();
+                nlohmann::json j;
+                j["hash"] = str; 
+                j["name"] = file; 
+                string jsonString = j.dump();
+                sortedFiles.push_back(j);
+            }
+    
+            nlohmann::json responseJson = nlohmann::json(sortedFiles);
+            string jsonString = responseJson.dump();
+            response.content_type = "application/json";
+            response.message = jsonString;
+            response.sessionID = sessionID;   //How to get session ID here??????
+            string createResponseForPostRequest = response.createPostResponse(response);
+            return createResponseForPostRequest;
+        } else {
+            string folderHashes;
+            kvsClient.get(folderHashes,row,sha256(folderName));
+            vector<string > folderHashesSet = splitStrings(folderHashes,"\r\n");
+            if(folderHashesSet[3] == "NULL")
+            {
+                transport->close();
+                response.content_type = "application/json";
+                response.message = "{}";
+                response.sessionID = sessionID;   //How to get session ID here??????
+                string createResponseForPostRequest = response.createPostResponse(response);
+                return createResponseForPostRequest;
+            }
+            cout<<"Folder Hashes: "<<folderHashesSet[3]<<endl;
+            vector<string> allFiles = splitStrings(folderHashesSet[3],",");
+            // check if the fileName is a folder or a file
+            vector<nlohmann::json> sortedFiles;
+            
+            for (const auto& str : allFiles) {
+                cout<<str<<endl;
+                string file;
+                auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient.get(file,row,str+"-NameOnly");
+                cout<<"HERE IS THE FILE->" << file << endl;
+                if (file[0] == '-') {
+                    continue;
+                }
+                transport->close();
+                nlohmann::json j;
+                j["hash"] = str; 
+                j["name"] = file; 
+                string jsonString = j.dump();
+                sortedFiles.push_back(j);
+            }
+            nlohmann::json responseJson = nlohmann::json(sortedFiles);
+            string jsonString = responseJson.dump();
+            transport->close();
+            response.content_type = "application/json";
+            response.message = jsonString;
+            response.sessionID = sessionID;   //How to get session ID here??????
+            string createResponseForPostRequest = response.createPostResponse(response);
+            return createResponseForPostRequest;
+        }
     } else if (command == "/deleteFolder") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFolder</h1>";
     } else if (command == "/renameFile") {
