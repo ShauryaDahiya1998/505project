@@ -269,7 +269,122 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
     } else if (command == "/login") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Contact Us</h1>";
     } else if (command == "/deleteFile") {
-        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFile</h1>";
+        cout<<"DELETE File/folder"<<endl;
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionResp;
+        string sessionID = "1111";
+        if (cookieIndex != -1) {
+            sessionID = req.substr(cookieIndex + 18, 7);
+            auto [transport, kvsClient] =  getKVSClient(getWorkerIP(sessionID,client));
+            kvsClient.get(sessionResp, sessionID, "1");
+            transport->close();
+            cout<<"check seeesion id here -> "<<sessionID<<endl;
+        }
+        cout << sessionResp << endl;
+        string user = splitStrings(sessionResp,",")[0];
+        string username = getUsernameFromEmail(user);
+
+        auto parsed = nlohmann::json::parse(body);
+        string fileName = parsed["fileName"];
+        string outerFolderName = parsed["folderName"];
+        string row = username+"-storage";
+        string col = sha256(fileName);
+        string fileType = parsed["fileType"];
+        if (fileType == "folder") {
+            return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFolder</h1>";
+        } else {
+            if (outerFolderName == "root") {
+                string fileHashes;
+                auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient.get(fileHashes,row,"AllFiles");
+                transport->close();
+                vector<string> fileHashSet = splitStrings(fileHashes,",");
+                // iterate through the hash of the file and delete the file
+                string fileHashLeft = "";
+                for (const auto& hash : fileHashSet) {
+                    if (hash != col+ "-0") {
+                        if (fileHashLeft == "") {
+                            fileHashLeft = hash;
+                        } else {
+                            fileHashLeft = fileHashLeft + "," + hash;
+                        }
+                    }
+                }
+                cout<<"File Hash Left: "<<fileHashLeft<<endl;
+                auto [transport1, kvsClient1] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient1.put(row,"AllFiles",fileHashLeft);
+                transport1->close();
+                // delete all the chunks of the file and also delete its name
+                int index = 0;
+                while(1) {
+                    string chunk = sha256(fileName) + "-" + to_string(index);
+                    string file;
+                    auto [transport2, kvsClient2] =  getKVSClient(getWorkerIP(row,client));
+                    kvsClient2.get(file,row,chunk);
+                    transport2->close();
+                    cout<<"File: "<<file<<endl;
+                    if (file[0] == '-') {
+                        break;
+                    }
+                    auto [transport3, kvsClient3] =  getKVSClient(getWorkerIP(row,client));
+                    bool a,b;
+                    a = kvsClient3.deleteCell(row,chunk);
+                    b = kvsClient3.deleteCell(row,chunk+"-NameOnly");
+                    cout<<"Delete: "<<a<<" "<<b<<endl;
+                    transport3->close();
+                    index++;
+                
+                }
+            } else {
+                string folderHashes;
+                auto [transport, kvsClient] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient.get(folderHashes,row,sha256(outerFolderName));
+                transport->close();
+                vector<string> folderHashesSet = splitStrings(folderHashes,"\r\n");
+                vector<string> filesNames = splitStrings(folderHashesSet[3],",");
+                string fileHashLeft = "";
+                for (const auto& hash : filesNames) {
+                    if (hash != col+ "-0") {
+                        if (fileHashLeft == "") {
+                            fileHashLeft = hash;
+                        } else {
+                            fileHashLeft = fileHashLeft + "," + hash;
+                        }
+                    }
+                }
+                if (fileHashLeft == "") {
+                    fileHashLeft = "NULL";
+                }
+                string newFolderHashes = folderHashesSet[0] + "\r\n" + folderHashesSet[1] + "\r\n" + folderHashesSet[2] + "\r\n" + fileHashLeft;
+                auto [transport1, kvsClient1] =  getKVSClient(getWorkerIP(row,client));
+                kvsClient1.put(row,sha256(outerFolderName),newFolderHashes);
+                transport1->close();
+                // delete all the chunks of the file and also delete its name
+                int index = 0;
+                while(1) {
+                    string chunk = sha256(fileName) + "-" + to_string(index);
+                    string file;
+                    auto [transport2, kvsClient2] =  getKVSClient(getWorkerIP(row,client));
+                    kvsClient2.get(file,row,chunk);
+                    transport2->close();
+                    if (file[0] == '-') {
+                        break;
+                    }
+                    auto [transport3, kvsClient3] =  getKVSClient(getWorkerIP(row,client));
+                    kvsClient3.deleteCell(row,chunk);
+                    kvsClient3.deleteCell(row,chunk+"-NameOnly");
+                    transport3->close();
+                    index++;
+                }
+            
+            }
+        }
+        response.content_type = "application/json";
+        response.message = "{}";
+        response.sessionID = sessionID;
+        string createResponseForPostRequest = response.createPostResponse(response);
+        return createResponseForPostRequest;
+        
     } else if (command == "/createFile") {
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;

@@ -462,6 +462,32 @@
     document.getElementById('file-upload').value = ''; // Reset the input after processing
     }   
 
+    function deleteFolderOrFile(fileName, fileType) {
+        // Get the current folder
+        let currentFolder;
+        if (currentPath.length === 0) {
+            currentFolder = 'root';
+        } else {
+            currentFolder = currentPath[currentPath.length - 1];
+        }
+        // Make a call to deleteFile to delete the file
+        const payload = JSON.stringify({
+            fileName: fileName,
+            fileType: fileType,
+            folderName: currentFolder
+        })
+        fetch('http://localhost:8080/deleteFile', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: payload
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('File deleted successfully', data);
+            fetchFiles();
+        })
+        .catch(error => console.error('Error deleting file:', error));
+    }
 
     function createFileIcon(fileName, fileType) {
     const icon = document.createElement('div');
@@ -470,8 +496,20 @@
     iconImg.className = 'fas ' + determineIcon(fileName);
     const text = document.createElement('div');
     text.textContent = fileName;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'X';
+    deleteBtn.style = 'padding: 5px 10px; margin-bottom: 20px; background-color: red; color: white; border-radius: 5px; cursor: pointer;';
+    deleteBtn.onclick = function() {
+        if (confirm('Are you sure you want to delete ' + fileName + '?')) {
+            // Assuming you have a function that handles the delete
+            deleteFolderOrFile(fileName, "txt");
+        }
+    };
+    icon.appendChild(deleteBtn);
     icon.appendChild(iconImg);
     icon.appendChild(text);
+    
     if (fileType == 'folder') {
         icon.onclick = function() {
             enterFolder(fileName);
@@ -540,6 +578,7 @@
     }
     return icon;
 }
+
 
 function showLightbox() {
     document.getElementById('imageLightbox').style.display = 'block';
