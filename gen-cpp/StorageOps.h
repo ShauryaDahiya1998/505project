@@ -28,6 +28,7 @@ class StorageOpsIf {
   virtual bool deleteCell(const std::string& row, const std::string& col) = 0;
   virtual bool deleteReplicate(const std::string& row, const std::string& col) = 0;
   virtual bool cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value) = 0;
+  virtual void sync(std::string& _return, const std::string& which) = 0;
 };
 
 class StorageOpsIfFactory {
@@ -79,6 +80,9 @@ class StorageOpsNull : virtual public StorageOpsIf {
   bool cput(const std::string& /* row */, const std::string& /* col */, const std::string& /* old_value */, const std::string& /* new_value */) override {
     bool _return = false;
     return _return;
+  }
+  void sync(std::string& /* _return */, const std::string& /* which */) override {
+    return;
   }
 };
 
@@ -684,6 +688,98 @@ class StorageOps_cput_presult {
 
 };
 
+typedef struct _StorageOps_sync_args__isset {
+  _StorageOps_sync_args__isset() : which(false) {}
+  bool which :1;
+} _StorageOps_sync_args__isset;
+
+class StorageOps_sync_args {
+ public:
+
+  StorageOps_sync_args(const StorageOps_sync_args&);
+  StorageOps_sync_args& operator=(const StorageOps_sync_args&);
+  StorageOps_sync_args() noexcept;
+
+  virtual ~StorageOps_sync_args() noexcept;
+  std::string which;
+
+  _StorageOps_sync_args__isset __isset;
+
+  void __set_which(const std::string& val);
+
+  bool operator == (const StorageOps_sync_args & rhs) const;
+  bool operator != (const StorageOps_sync_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const StorageOps_sync_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class StorageOps_sync_pargs {
+ public:
+
+
+  virtual ~StorageOps_sync_pargs() noexcept;
+  const std::string* which;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _StorageOps_sync_result__isset {
+  _StorageOps_sync_result__isset() : success(false) {}
+  bool success :1;
+} _StorageOps_sync_result__isset;
+
+class StorageOps_sync_result {
+ public:
+
+  StorageOps_sync_result(const StorageOps_sync_result&);
+  StorageOps_sync_result& operator=(const StorageOps_sync_result&);
+  StorageOps_sync_result() noexcept;
+
+  virtual ~StorageOps_sync_result() noexcept;
+  std::string success;
+
+  _StorageOps_sync_result__isset __isset;
+
+  void __set_success(const std::string& val);
+
+  bool operator == (const StorageOps_sync_result & rhs) const;
+  bool operator != (const StorageOps_sync_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const StorageOps_sync_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _StorageOps_sync_presult__isset {
+  _StorageOps_sync_presult__isset() : success(false) {}
+  bool success :1;
+} _StorageOps_sync_presult__isset;
+
+class StorageOps_sync_presult {
+ public:
+
+
+  virtual ~StorageOps_sync_presult() noexcept;
+  std::string* success;
+
+  _StorageOps_sync_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class StorageOpsClient : virtual public StorageOpsIf {
  public:
   StorageOpsClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) {
@@ -727,6 +823,9 @@ class StorageOpsClient : virtual public StorageOpsIf {
   bool cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value) override;
   void send_cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value);
   bool recv_cput();
+  void sync(std::string& _return, const std::string& which) override;
+  void send_sync(const std::string& which);
+  void recv_sync(std::string& _return);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -748,6 +847,7 @@ class StorageOpsProcessor : public ::apache::thrift::TDispatchProcessor {
   void process_deleteCell(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_deleteReplicate(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_cput(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_sync(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   StorageOpsProcessor(::std::shared_ptr<StorageOpsIf> iface) :
     iface_(iface) {
@@ -757,6 +857,7 @@ class StorageOpsProcessor : public ::apache::thrift::TDispatchProcessor {
     processMap_["deleteCell"] = &StorageOpsProcessor::process_deleteCell;
     processMap_["deleteReplicate"] = &StorageOpsProcessor::process_deleteReplicate;
     processMap_["cput"] = &StorageOpsProcessor::process_cput;
+    processMap_["sync"] = &StorageOpsProcessor::process_sync;
   }
 
   virtual ~StorageOpsProcessor() {}
@@ -840,6 +941,16 @@ class StorageOpsMultiface : virtual public StorageOpsIf {
     return ifaces_[i]->cput(row, col, old_value, new_value);
   }
 
+  void sync(std::string& _return, const std::string& which) override {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->sync(_return, which);
+    }
+    ifaces_[i]->sync(_return, which);
+    return;
+  }
+
 };
 
 // The 'concurrent' client is a thread safe client that correctly handles
@@ -890,6 +1001,9 @@ class StorageOpsConcurrentClient : virtual public StorageOpsIf {
   bool cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value) override;
   int32_t send_cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value);
   bool recv_cput(const int32_t seqid);
+  void sync(std::string& _return, const std::string& which) override;
+  int32_t send_sync(const std::string& which);
+  void recv_sync(std::string& _return, const int32_t seqid);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

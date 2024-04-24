@@ -16,16 +16,18 @@
 #include <map>
 #include <filesystem>
 #include "gen-cpp/StorageOps.h"
+#include "gen-cpp/KvsCoordOps.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <memory>
 #include <thrift/transport/TSocket.h>
+#include <openssl/sha.h>
 
 
-
-namespace fs = std::filesystem;
+using namespace std;
+namespace fs = filesystem;
 
 using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
@@ -35,165 +37,193 @@ using namespace ::apache::thrift::server;
 using namespace  ::storage;
 
 
-#define LogCompactSize 10000
+#define LogCompactSize 100
 
-std::string dir;
-std::string logFileName;
-std::string tabletFileName;
-std::map<std::string, std::map<std::string, std::string>> tablet;
-std::ofstream logFileFD;
-std::vector<std::string> replicas;
+string dir;
+vector<string> logFileNames;
+vector<string> tabletFileNames;
+vector<map<string, map<string, string>>> tablets;
+vector<ofstream *> logFileFDs;
+vector<string> replicas;
+string my_ip;
+int my_index = 0;
+int num_nodes = 0;
 
-
-std::string stringToBinary(std::string input) {
-    std::string binaryString;
-    for (char c : input) {
-        binaryString += std::bitset<8>(c).to_string();
-    }
-    return binaryString;
+bool openLogFile(string filename) {
+    ofstream *logFileFD = new ofstream;
+    logFileFD->open(filename, ios::app); // Open in append mode
+    cout << "DF" << endl;
+    logFileFDs.push_back(logFileFD);
+    return logFileFD->is_open();
 }
 
-std::string binaryToString(std::string binary) {
-    std::string text = "";
-    for (size_t i = 0; i < binary.length(); i += 8) { // Assuming a space separates every 8 bits
-        // Substring of 8 bits and conversion to char
-        std::string byteString = binary.substr(i, 8);
-        char character = static_cast<char>(std::bitset<8>(byteString).to_ulong());
-        text += character;
-    }
-    // std::cout << text << std::endl;
-    return text;
-}
-
-void printTablet() {
-    for (const auto& outerPair : tablet) {
-        std::cout << outerPair.first << ":\n"; // Print the key of the outer map
-        for (const auto& innerPair : outerPair.second) {
-            // Print the key-value pairs of the inner map
-            std::cout << "  " << innerPair.first << " => " << innerPair.second << "\n";
-        }
-    }
-}
-
-
-bool openLogFile(std::string filename) {
-    logFileFD.open(filename, std::ios::app); // Open in append mode
-    std::cout << "DF" << std::endl;
-    return logFileFD.is_open();
-}
-
-bool doLogCompact(std::string filename, std::uintmax_t threshold) {
-    std::uintmax_t file_size = fs::file_size(filename);
-    // std::cout << "Log file size " << file_size << std::endl;
+bool doLogCompact(string filename, uintmax_t threshold) {
+    uintmax_t file_size = fs::file_size(filename);
+    // cout << "Log file size " << file_size << endl;
     return file_size > threshold;
 }
 
-void writeTabletToDisk(std::string filename) {
-    std::ofstream outfile(filename);
+int getNodeIndex(const string& value) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, value.c_str(), value.length());
+    SHA256_Final(hash, &sha256);
+
+    // Convert the first 4 bytes of the hash to an integer
+    int hashInt = *((int*)hash);
+
+    // Ensure hashInt is non-negative
+    hashInt = hashInt < 0 ? -hashInt : hashInt;
+
+    // Return the node index by taking modulus with the number of nodes
+    return hashInt % num_nodes;
+}
+
+int whichNode(const string& value) {
+    int intended_node = getNodeIndex(value);
+    if(intended_node == my_index) {
+        return 0;
+    }
+    if((intended_node == my_index - 1) or ((intended_node == num_nodes - 1) and (my_index == 0))) {
+        //this node is the secondary replica
+        return 1;
+    }
+    if((intended_node == my_index - 2) or ((intended_node == num_nodes - 2 and my_index == 0)) or (intended_node == num_nodes - 1 and my_index == 1)) {
+        //this node is the tertiary replica
+        return 2;
+    }
+    return 0;
+}
+
+void writeTabletToDisk(string filename, int which_tablet) {
+    cerr<<"\nWriting tablet to disk with filename: " + filename; 
+    ofstream outfile(filename);
 
     if (outfile.is_open()) {
-        for (const auto& pair : tablet) {
+        for (const auto& pair : tablets[which_tablet]) {
             outfile << pair.first << ":";
             for (const auto& innerPair : pair.second) {
                 outfile << innerPair.first << "=" << innerPair.second << ",";
             }
-            outfile << std::endl;
+            outfile << endl;
         }
         outfile.close();
-        std::cout << "KVS Server : Map has been written to " << filename << std::endl;
+        cout << "KVS Server : Map has been written to " << filename << endl;
     } else {
-        std::cerr << "KVS Server : Failed to open the output file: " << filename << std::endl;
+        cerr << "KVS Server : Failed to open the output file: " << filename << endl;
     }
 }
 
-void readTabletFromDisk(std::string filename) {
-    std::ifstream tabletFile(filename);
-    std::string line;
+vector<string> splitString(const string& s, char delimiter) {
+    vector<string> tokens;
+    string token;
+    istringstream tokenStream(s);
+    while (getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    tokens.push_back("");
+    return tokens;
+}
+
+void readTabletFromDisk(string filename, int which_tablet) {
+    ifstream tabletFile(filename);
+    string line;
 
     if (tabletFile.is_open()) {
-        while (std::getline(tabletFile, line)) {
-            std::istringstream iss(line);
-            std::string row;
-            // std::cout << line ;
-            if (!(std::getline(iss, row, ':'))) {
+        while (getline(tabletFile, line)) {
+            istringstream iss(line);
+            string row;
+            if (!(getline(iss, row, ':'))) {
                 continue;
             }
-            std::string value;
-            while (std::getline(iss, value, ',')) {
-                std::string col, val;
-                std::istringstream iss2(value);
-                if (std::getline(std::getline(iss2, col, '=') >> std::ws, val)) {
-                    tablet[row][col] = val;
+            string value;
+            while (getline(iss, value, ',')) {
+                string col, val;
+                istringstream iss2(value);
+                if (getline(getline(iss2, col, '=') >> ws, val)) {
+                    tablets[which_tablet][row][col] = val;
                 }
             }
         }
         tabletFile.close();
-        std::cout << "KVS Server : Map has been read from " << filename << std::endl;
+        cout << "KVS Server : Map has been read from " << filename << endl;
     }
 }
 
-void readConfig(std::string filename) {
-    std::ifstream file(filename);
+void readConfig(string filename) {
+    ifstream file(filename);
     
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
+        cerr << "Failed to open file: " << filename << endl;
     }
     
-    std::string line;
-    while (std::getline(file, line)) {
-        replicas.push_back(line);
+    string line;
+    int i = 0;
+    while (getline(file, line)) {
+        if(i == my_index) {
+            vector <string> ips = splitString(line, ';');
+            my_ip = ips[0];
+            replicas.push_back(ips[1]);
+            replicas.push_back(ips[2]);
+            // cerr<<"\nthis is alsp printing";
+            // break;
+        }
+        num_nodes++;
+        i++;
     }
     file.close();
 }
 
-void writeLog(std::string log) {
-    if (logFileFD.is_open()) {
-        logFileFD << log << std::endl;
+void writeLog(string log, int which_file) {
+    if (logFileFDs[which_file]->is_open()) {
+        *logFileFDs[which_file] << log << endl;
     } else {
-        std::cerr << "Error: Log file is not open." << std::endl;
+        cerr << "Error: Log file is not open." << endl;
     }
-    if(doLogCompact(logFileName,LogCompactSize)){
-        writeTabletToDisk(tabletFileName);
-        logFileFD.close(); 
-        logFileFD.open(logFileName, std::ios::trunc); 
+    if(doLogCompact(logFileNames[which_file],LogCompactSize)){
+        writeTabletToDisk(logFileNames[which_file], which_file);
+        logFileFDs[which_file]->close(); 
+        logFileFDs[which_file]->open(logFileNames[which_file], ios::trunc); 
     }
 }
 
-void replayLogFile(std::string filename){
-    readTabletFromDisk(tabletFileName);
-    std::ifstream logFD(filename);
-    std::string line;
-    while (std::getline(logFD, line)) {
-        std::istringstream iss(line);
-        std::string command;
-        std::string row, col, value;
+
+void replayLogFile(string filename, int which_file){
+    readTabletFromDisk(tabletFileNames[which_file], which_file);
+    ifstream logFD(filename);
+    string line;
+    while (getline(logFD, line)) {
+        istringstream iss(line);
+        string command;
+        string row, col, value;
         if (iss >> command)
         { 
-            // std::cout << command << std::endl;
+            // cout << command << endl;
             if(command == "PUT") 
             {
                 if (!(iss >> row >> col >> value)) {
-                    std::cerr << "Error: Invalid PUT log line - " << line << std::endl;
+                    cerr << "Error: Invalid PUT log line - " << line << endl;
                     continue;
                 }
-                tablet[row][col] = value;
+                tablets[which_file][row][col] = value;
             }
             else if(command == "DELETE") 
             {
                 if (!(iss >> row >> col)) {
-                    std::cerr << "Error: Invalid DELETE log line - " << line << std::endl;
+                    cerr << "Error: Invalid DELETE log line - " << line << endl;
                     continue;
                 }
-                tablet[row].erase(col);
+                tablets[which_file][row].erase(col);
             }
         }
     }
     logFD.close();
 }
 
-bool valueExists(std::string row,std::string col){
-    auto rowIterator = tablet.find(row);
-    if (rowIterator != tablet.end()) {
+bool valueExists(string row, string col, int which_node){
+    auto rowIterator = tablets[which_node].find(row);
+    if (rowIterator != tablets[which_node].end()) {
         auto columnIterator = rowIterator->second.find(col);
         if (columnIterator != rowIterator->second.end()) {
             return true;
@@ -212,18 +242,82 @@ bool directoryExists() {
     return (info.st_mode & S_IFDIR) != 0;
 }
 
-void replicatePut(const std::string& row, const std::string& col, const std::string& value) {
+void *sendKeepAlive(void *arg) {
+    ::shared_ptr<TTransport> socket(new TSocket("127.0.0.1", 8000));
+    ::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    ::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    KvsCoordOpsClient client(protocol);
+    while(true) {
+        sleep(1);
+        transport->open();
+        string ip;
+        cerr<<"\nSENDING KEEP ALIVE WITH IP: "<<my_ip;
+        client.keepAlive(ip, my_ip);
+        if(ip != my_ip) {
+            //this node just crashed, it needs to sync with the current primary
+            vector<string> ip_address = splitString(ip, ':');
+            int which_replica = stoi(ip_address[0]);
+            ::shared_ptr<TTransport> sync_socket(new TSocket(ip_address[1], stoi(ip_address[2])));
+            ::shared_ptr<TTransport> sync_transport(new TBufferedTransport(sync_socket));
+            ::shared_ptr<TProtocol> sync_protocol(new TBinaryProtocol(sync_transport));
+            StorageOpsClient sync_client(sync_protocol);
+
+            sync_transport->open();
+
+            string logs_and_table;
+
+            sync_client.sync(logs_and_table, to_string(which_replica));
+            cerr<<"\nlogs_and_table result: "<<logs_and_table;
+
+            vector <string> landt = splitString(logs_and_table, '$');
+            cerr<<"\nCHECKPT3";
+            string logs = landt[0];
+            cerr<<"\nCHECKPT4";
+            string tablet = landt[1];
+            cerr<<"\nCHECKPT5";
+
+            //write logs.txt to log files[0] and table to tablet files[0]
+            // logFileFDs[0]
+            ofstream outfile(logFileNames[0], ios::trunc);
+            cerr<<"\nCHECKPT6";
+
+            if (outfile.is_open()) {
+                outfile << logs;
+                
+            } 
+            cerr<<"\nCHECKPT7";
+            outfile.close();
+
+            ofstream tabletoutfile(tabletFileNames[0], ios::trunc);
+
+            if (tabletoutfile.is_open()) {
+                tabletoutfile << tablet;
+                
+            } 
+            tabletoutfile.close();
+
+            replayLogFile(logFileNames[0], 0);
+
+            sync_transport->close();
+            client.syncComplete(ip, my_ip);
+
+        }
+        transport->close();
+    }
+}
+
+void replicatePut(const string& row, const string& col, const string& value) {
     
     for (const auto& replica : replicas) {
-        std::cout << replica;
+        cout << replica;
         int retry = 0;
         size_t colonPos = replica.find(':');
-        std::string replicaIP = replica.substr(0, colonPos);
-        int replicaPort = std::stoi(replica.substr(colonPos + 1));
+        string replicaIP = replica.substr(0, colonPos);
+        int replicaPort = stoi(replica.substr(colonPos + 1));
        
-        ::std::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
-        ::std::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-        ::std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        ::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
+        ::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        ::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
         StorageOpsClient client(protocol);
         try {
             transport->open();
@@ -231,21 +325,21 @@ void replicatePut(const std::string& row, const std::string& col, const std::str
                 retry++;
         }
         catch (TException &tx) {
-            std::cerr << "ERROR: " << tx.what() << std::endl;
+            cerr << "ERROR: " << tx.what() << endl;
         }
     }
 }
 
-void deleteData(const std::string& row, const std::string& col) {
+void deleteData(const string& row, const string& col, int which_node) {
     
     for (const auto& replica : replicas) {
         int retry = 0;
         size_t colonPos = replica.find(':');
-        std::string replicaIP = replica.substr(0, colonPos);
-        int replicaPort = std::stoi(replica.substr(colonPos + 1));
-        ::std::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
-        ::std::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-        ::std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        string replicaIP = replica.substr(0, colonPos);
+        int replicaPort = stoi(replica.substr(colonPos + 1));
+        ::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
+        ::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        ::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
         StorageOpsClient client(protocol);
         try {
             transport->open();
@@ -253,7 +347,7 @@ void deleteData(const std::string& row, const std::string& col) {
                 retry++;
         }
         catch (TException &tx) {
-            std::cerr << "ERROR: " << tx.what() << std::endl;
+            cerr << "ERROR: " << tx.what() << endl;
         }
     }
 }
@@ -265,95 +359,124 @@ class StorageOpsHandler : virtual public StorageOpsIf {
 
 
 
-  bool put(const std::string& row, const std::string& col, const std::string& value) {
+  bool put(const string& row, const string& col, const string& value) {
     // Your implementation goes here
-    std::string bytesData = stringToBinary(value);
-    // std::cout << bytesData<<std::endl;
-    tablet[row][col] = bytesData;
-    replicatePut(row,col,bytesData);
-    std::string log = "PUT " + row + " " + col + " " + bytesData;
-    writeLog(log);
+    tablets[whichNode(row)][row][col] = value;
+    replicatePut(row,col,value);
+    string log = "PUT " + row + " " + col + " " + value;
+    writeLog(log, whichNode(row));
     return true;
   }
 
-  bool replicateData(const std::string& row, const std::string& col, const std::string& value) {
-    tablet[row][col] = value;
-    std::string log = "PUT " + row + " " + col + " " + value;
-    writeLog(log);
+  bool replicateData(const string& row, const string& col, const string& value) {
+    int intended_index = getNodeIndex(row);
+    string log = "PUT " + row + " " + col + " " + value;
+    if((intended_index == my_index - 1) or ((intended_index == num_nodes - 1) and (my_index == 0))) {
+        //this node is the secondary replica
+        tablets[1][row][col] = value;
+        writeLog(log, 1);
+    } else if((intended_index == my_index - 2) or ((intended_index == num_nodes - 2 and my_index == 0)) or (intended_index == num_nodes - 1 and my_index == 1)) {
+        //this node is the tertiary replica
+        tablets[2][row][col] = value;
+        writeLog(log, 2);
+    } else {
+        tablets[0][row][col] = value;
+        writeLog(log, 0);
+    }
     return true;
   }
 
-void get(std::string& _return, const std::string& row, const std::string& col) {
-    std::cout << row << col << std::endl;
-    if(!valueExists(row,col))
+  void get(string& _return, const string& row, const string& col) {
+    int which_node = whichNode(row);
+    if(!valueExists(row,col,which_node))
         _return = "-ERR invalid row/column\r\n";
     else
-        _return = binaryToString(tablet[row][col]);
+        _return = tablets[which_node][row][col];
   }
 
-  bool deleteCell(const std::string& row, const std::string& col) {
-    if(!valueExists(row,col))
+  bool deleteCell(const string& row, const string& col) {
+    int which_node = whichNode(row);
+    if(!valueExists(row, col, which_node))
         return false;
     else
     {
-        tablet[row].erase(col);
-        deleteData(row,col);
-        std::string log = "DELETE " + row + " " + col;
-        writeLog(log);
+        tablets[which_node][row].erase(col);
+        deleteData(row, col, which_node);
+        string log = "DELETE " + row + " " + col;
+        writeLog(log, which_node);
         return true;
     }
     return false;
   }
 
-  bool deleteReplicate(const std::string& row, const std::string& col) {
-    if(!valueExists(row,col))
+  bool deleteReplicate(const string& row, const string& col) {
+    int which_node = whichNode(row);
+    if(!valueExists(row, col, which_node))
         return false;
     else
     {
-        tablet[row].erase(col);
-        std::string log = "DELETE " + row + " " + col;
-        writeLog(log);
+        tablets[which_node][row].erase(col);
+        string log = "DELETE " + row + " " + col;
+        writeLog(log, which_node);
         return true;
     }
     return false;
   }
 
-  bool cput(const std::string& row, const std::string& col, const std::string& old_value, const std::string& new_value) {
-    if(!valueExists(row,col) || old_value!=tablet[row][col])
+  bool cput(const string& row, const string& col, const string& old_value, const string& new_value) {
+    int which_node = whichNode(row);
+    if(!valueExists(row, col, which_node) || old_value!=tablets[which_node][row][col])
         return false;
     else
     {
-        tablet[row][col] = new_value;
-        replicateData(row,col,new_value);
-        std::string log = "PUT " + row + " " + col + " " + new_value;
-        writeLog(log);
+        tablets[whichNode(row)][row][col] = new_value;
+        replicateData(row, col, new_value);
+        string log = "PUT " + row + " " + col + " " + new_value;
+        writeLog(log, whichNode(row));
         return true;
     }
     return false;
   }
+
+  void sync(std::string& _return, const std::string& which) {
+    int version = stoi(which);
+
+    ifstream inputFile(logFileNames[version]);
+    if (!inputFile.is_open()) {
+        std::cerr << "Error opening file for reading!" << std::endl;
+        return;
+    } 
+    // Read the contents of the file into a stringstream
+    stringstream buffer;
+    buffer << inputFile.rdbuf();
+    // Close the file
+    inputFile.close();
+    // Extract the string from the stringstream
+    string logs = buffer.str();
+
+    ifstream inputFileTablet(tabletFileNames[version]);
+    if (!inputFileTablet.is_open()) {
+        std::cerr << "Error opening file for reading!" << std::endl;
+        return;
+    } 
+    // Read the contents of the file into a stringstream
+    stringstream bufferTablet;
+    bufferTablet << inputFileTablet.rdbuf();
+    // Close the file
+    inputFileTablet.close();
+    // Extract the string from the stringstream
+    string tablet = bufferTablet.str();
+
+    _return = logs + "$" + tablet;
+
+  }
+
 };
 
 
+// kvs worker should take in 1. index number for current worker node and 2. directory
 int main(int argc, char *argv[])
-{
-    if(argc<2){
-        std::cerr<<"No directory specified"<<std::endl;
-    }
-    dir = argv[argc-1];
-    if(!directoryExists())
-    {
-        std::cerr<<"No directory exists"<<std::endl;
-        return 1;
-    }
-
-    logFileName = dir + "/log.txt";
-    std::string configFileName = dir + "/config.txt";
-    tabletFileName = dir + "/tablet.txt";
-    readConfig(configFileName);
-    replayLogFile(logFileName);
-    openLogFile(logFileName);
-    printTablet();
-   
+{  
     int c = 0;
     char* portArg = nullptr;
     while((c=getopt(argc,argv,"p:"))!=-1){
@@ -367,16 +490,66 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(optind < argc) {
+        my_index = atoi(argv[optind++]);
+        if(optind < argc) {
+            dir = argv[optind];
+        } else {
+            cout<<"Please enter index of worker node and storage directory\n";
+            return 0;
+        }
+    } else {
+        cout<<"Please enter index of worker node and storage directory\n";
+        return 0;
+    }
+
+    if(!directoryExists())
+    {
+        cerr<<"No directory exists"<<endl;
+        return 1;
+    }
+    map<string, map<string, string>> primary_tablet;
+    map<string, map<string, string>> secondary_tablet;
+    map<string, map<string, string>> tertiary_tablet;
+    tablets.push_back(primary_tablet);
+    tablets.push_back(secondary_tablet);
+    tablets.push_back(tertiary_tablet);
+
+    logFileNames.push_back(dir + "/primary_log.txt");
+    logFileNames.push_back(dir + "/secondary_log.txt");
+    logFileNames.push_back(dir + "/tertiary_log.txt");
+    string configFileName = dir + "/config.txt";
+
+    tabletFileNames.push_back(dir + "/primary_tablet.txt");
+    tabletFileNames.push_back(dir + "/secondary_tablet.txt");
+    tabletFileNames.push_back(dir + "/tertiary_tablet.txt");
+
+    readConfig(configFileName);
+    replayLogFile(logFileNames[0], 0);
+    replayLogFile(logFileNames[1], 1);
+    replayLogFile(logFileNames[2], 2);
+
+    openLogFile(logFileNames[0]);
+    openLogFile(logFileNames[1]);
+    openLogFile(logFileNames[2]);
+
     int port = 8000;
     if(portArg!=nullptr)
-        port=std::atoi(portArg);
+        port=atoi(portArg);
 
 
-    ::std::shared_ptr<StorageOpsHandler> handler(new StorageOpsHandler());
-    ::std::shared_ptr<TProcessor> processor(new StorageOpsProcessor(handler));
-    ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-    ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-    ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+    pthread_t keep_alive_thread;
+    if(pthread_create(&keep_alive_thread, NULL, sendKeepAlive, NULL) != 0) {
+        perror("Thread creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+
+    ::shared_ptr<StorageOpsHandler> handler(new StorageOpsHandler());
+    ::shared_ptr<TProcessor> processor(new StorageOpsProcessor(handler));
+    ::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+    ::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+    ::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
 
     TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);

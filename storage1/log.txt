@@ -1,3 +1,0 @@
-PUT bhi@test password est
-PUT abhi password test
-PUT abhi2358@seas.upenn.edu password test
