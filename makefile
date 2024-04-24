@@ -1,7 +1,8 @@
 CXX = g++ # Windows (SAD) LINE
 # CXX = aarch64-linux-gnu-g++  MAC LINE
 
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -w
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -w -I/usr/local/include/
+
 LIBS = -lthrift -lssl -lcrypto -lresolv
 
 TARGET = myserver
@@ -9,6 +10,10 @@ TARGET = myserver
 SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc smtpclient.cc smtp.cc
 
 KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp 
+
+KVS_COORD = kvsCoord.cc gen-cpp/KvsCoordOps.cpp
+
+KVS_COORD_TARGET = kvsCoord
 
 KVS_TARGET = kvs
 
@@ -26,6 +31,9 @@ $(TARGET): $(OBJECTS)
 	$(CXX)  $(CXXFLAGS)  -o $(TARGET)  gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp $(OBJECTS)  -lpthread $(LIBS) -w
 
 $(KVS_TARGET): $(KVS_SERVER)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+$(KVS_COORD_TARGET): $(KVS_COORD)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(KVS_CLIENT_TARGET): $(KVS_CLIENT)
