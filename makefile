@@ -1,12 +1,12 @@
 CXX = aarch64-linux-gnu-g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -pthread
 LIBS = -lthrift -lssl -lcrypto
 
 TARGET = myserver
 # Define source files
 SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc
 
-KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp
+KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp
 
 KVS_TARGET = kvs 
 
@@ -18,10 +18,14 @@ CLIENT = client.cc gen-cpp/KvsCoordOps.cpp
 
 CLIENT_TARGET = client
 
+TEST_CLIENT = testclient.cc gen-cpp/StorageOps.cpp
+
+TEST_CLIENT_TARGET = testclient
+
 # Automatically generate a list of object files
 OBJECTS = $(SOURCES:.cc=.o)
 # Default target
-all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET) $(CLIENT_TARGET)
+all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET) $(CLIENT_TARGET) $(TEST_CLIENT_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."
@@ -36,6 +40,10 @@ $(KVS_COORD_TARGET): $(KVS_COORD)
 $(CLIENT_TARGET): $(CLIENT)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
+$(TEST_CLIENT_TARGET): $(TEST_CLIENT)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+
 # Rule to compile source files to object files
 %.o: %.cc
 	@echo "Compiling $<"
@@ -44,4 +52,4 @@ $(CLIENT_TARGET): $(CLIENT)
 # Clean the built files
 clean:
 	@echo "Cleaning..."
-	@rm -f $(TARGET) $(OBJECTS) $(KVS_TARGET) $(KVS_COORD_TARGET)
+	@rm -f $(TARGET) $(OBJECTS) $(KVS_TARGET) $(KVS_COORD_TARGET) $(TEST_CLIENT_TARGET)

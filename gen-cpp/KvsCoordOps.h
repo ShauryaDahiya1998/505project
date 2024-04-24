@@ -23,6 +23,8 @@ class KvsCoordOpsIf {
  public:
   virtual ~KvsCoordOpsIf() {}
   virtual void get(std::string& _return, const std::string& row) = 0;
+  virtual void keepAlive(std::string& _return, const std::string& ip) = 0;
+  virtual void syncComplete(std::string& _return, const std::string& ip) = 0;
 };
 
 class KvsCoordOpsIfFactory {
@@ -53,6 +55,12 @@ class KvsCoordOpsNull : virtual public KvsCoordOpsIf {
  public:
   virtual ~KvsCoordOpsNull() {}
   void get(std::string& /* _return */, const std::string& /* row */) override {
+    return;
+  }
+  void keepAlive(std::string& /* _return */, const std::string& /* ip */) override {
+    return;
+  }
+  void syncComplete(std::string& /* _return */, const std::string& /* ip */) override {
     return;
   }
 };
@@ -149,6 +157,190 @@ class KvsCoordOps_get_presult {
 
 };
 
+typedef struct _KvsCoordOps_keepAlive_args__isset {
+  _KvsCoordOps_keepAlive_args__isset() : ip(false) {}
+  bool ip :1;
+} _KvsCoordOps_keepAlive_args__isset;
+
+class KvsCoordOps_keepAlive_args {
+ public:
+
+  KvsCoordOps_keepAlive_args(const KvsCoordOps_keepAlive_args&);
+  KvsCoordOps_keepAlive_args& operator=(const KvsCoordOps_keepAlive_args&);
+  KvsCoordOps_keepAlive_args() noexcept;
+
+  virtual ~KvsCoordOps_keepAlive_args() noexcept;
+  std::string ip;
+
+  _KvsCoordOps_keepAlive_args__isset __isset;
+
+  void __set_ip(const std::string& val);
+
+  bool operator == (const KvsCoordOps_keepAlive_args & rhs) const;
+  bool operator != (const KvsCoordOps_keepAlive_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const KvsCoordOps_keepAlive_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class KvsCoordOps_keepAlive_pargs {
+ public:
+
+
+  virtual ~KvsCoordOps_keepAlive_pargs() noexcept;
+  const std::string* ip;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _KvsCoordOps_keepAlive_result__isset {
+  _KvsCoordOps_keepAlive_result__isset() : success(false) {}
+  bool success :1;
+} _KvsCoordOps_keepAlive_result__isset;
+
+class KvsCoordOps_keepAlive_result {
+ public:
+
+  KvsCoordOps_keepAlive_result(const KvsCoordOps_keepAlive_result&);
+  KvsCoordOps_keepAlive_result& operator=(const KvsCoordOps_keepAlive_result&);
+  KvsCoordOps_keepAlive_result() noexcept;
+
+  virtual ~KvsCoordOps_keepAlive_result() noexcept;
+  std::string success;
+
+  _KvsCoordOps_keepAlive_result__isset __isset;
+
+  void __set_success(const std::string& val);
+
+  bool operator == (const KvsCoordOps_keepAlive_result & rhs) const;
+  bool operator != (const KvsCoordOps_keepAlive_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const KvsCoordOps_keepAlive_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _KvsCoordOps_keepAlive_presult__isset {
+  _KvsCoordOps_keepAlive_presult__isset() : success(false) {}
+  bool success :1;
+} _KvsCoordOps_keepAlive_presult__isset;
+
+class KvsCoordOps_keepAlive_presult {
+ public:
+
+
+  virtual ~KvsCoordOps_keepAlive_presult() noexcept;
+  std::string* success;
+
+  _KvsCoordOps_keepAlive_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _KvsCoordOps_syncComplete_args__isset {
+  _KvsCoordOps_syncComplete_args__isset() : ip(false) {}
+  bool ip :1;
+} _KvsCoordOps_syncComplete_args__isset;
+
+class KvsCoordOps_syncComplete_args {
+ public:
+
+  KvsCoordOps_syncComplete_args(const KvsCoordOps_syncComplete_args&);
+  KvsCoordOps_syncComplete_args& operator=(const KvsCoordOps_syncComplete_args&);
+  KvsCoordOps_syncComplete_args() noexcept;
+
+  virtual ~KvsCoordOps_syncComplete_args() noexcept;
+  std::string ip;
+
+  _KvsCoordOps_syncComplete_args__isset __isset;
+
+  void __set_ip(const std::string& val);
+
+  bool operator == (const KvsCoordOps_syncComplete_args & rhs) const;
+  bool operator != (const KvsCoordOps_syncComplete_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const KvsCoordOps_syncComplete_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class KvsCoordOps_syncComplete_pargs {
+ public:
+
+
+  virtual ~KvsCoordOps_syncComplete_pargs() noexcept;
+  const std::string* ip;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _KvsCoordOps_syncComplete_result__isset {
+  _KvsCoordOps_syncComplete_result__isset() : success(false) {}
+  bool success :1;
+} _KvsCoordOps_syncComplete_result__isset;
+
+class KvsCoordOps_syncComplete_result {
+ public:
+
+  KvsCoordOps_syncComplete_result(const KvsCoordOps_syncComplete_result&);
+  KvsCoordOps_syncComplete_result& operator=(const KvsCoordOps_syncComplete_result&);
+  KvsCoordOps_syncComplete_result() noexcept;
+
+  virtual ~KvsCoordOps_syncComplete_result() noexcept;
+  std::string success;
+
+  _KvsCoordOps_syncComplete_result__isset __isset;
+
+  void __set_success(const std::string& val);
+
+  bool operator == (const KvsCoordOps_syncComplete_result & rhs) const;
+  bool operator != (const KvsCoordOps_syncComplete_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const KvsCoordOps_syncComplete_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _KvsCoordOps_syncComplete_presult__isset {
+  _KvsCoordOps_syncComplete_presult__isset() : success(false) {}
+  bool success :1;
+} _KvsCoordOps_syncComplete_presult__isset;
+
+class KvsCoordOps_syncComplete_presult {
+ public:
+
+
+  virtual ~KvsCoordOps_syncComplete_presult() noexcept;
+  std::string* success;
+
+  _KvsCoordOps_syncComplete_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class KvsCoordOpsClient : virtual public KvsCoordOpsIf {
  public:
   KvsCoordOpsClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) {
@@ -177,6 +369,12 @@ class KvsCoordOpsClient : virtual public KvsCoordOpsIf {
   void get(std::string& _return, const std::string& row) override;
   void send_get(const std::string& row);
   void recv_get(std::string& _return);
+  void keepAlive(std::string& _return, const std::string& ip) override;
+  void send_keepAlive(const std::string& ip);
+  void recv_keepAlive(std::string& _return);
+  void syncComplete(std::string& _return, const std::string& ip) override;
+  void send_syncComplete(const std::string& ip);
+  void recv_syncComplete(std::string& _return);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -193,10 +391,14 @@ class KvsCoordOpsProcessor : public ::apache::thrift::TDispatchProcessor {
   typedef std::map<std::string, ProcessFunction> ProcessMap;
   ProcessMap processMap_;
   void process_get(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_keepAlive(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_syncComplete(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   KvsCoordOpsProcessor(::std::shared_ptr<KvsCoordOpsIf> iface) :
     iface_(iface) {
     processMap_["get"] = &KvsCoordOpsProcessor::process_get;
+    processMap_["keepAlive"] = &KvsCoordOpsProcessor::process_keepAlive;
+    processMap_["syncComplete"] = &KvsCoordOpsProcessor::process_syncComplete;
   }
 
   virtual ~KvsCoordOpsProcessor() {}
@@ -235,6 +437,26 @@ class KvsCoordOpsMultiface : virtual public KvsCoordOpsIf {
     return;
   }
 
+  void keepAlive(std::string& _return, const std::string& ip) override {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->keepAlive(_return, ip);
+    }
+    ifaces_[i]->keepAlive(_return, ip);
+    return;
+  }
+
+  void syncComplete(std::string& _return, const std::string& ip) override {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->syncComplete(_return, ip);
+    }
+    ifaces_[i]->syncComplete(_return, ip);
+    return;
+  }
+
 };
 
 // The 'concurrent' client is a thread safe client that correctly handles
@@ -270,6 +492,12 @@ class KvsCoordOpsConcurrentClient : virtual public KvsCoordOpsIf {
   void get(std::string& _return, const std::string& row) override;
   int32_t send_get(const std::string& row);
   void recv_get(std::string& _return, const int32_t seqid);
+  void keepAlive(std::string& _return, const std::string& ip) override;
+  int32_t send_keepAlive(const std::string& ip);
+  void recv_keepAlive(std::string& _return, const int32_t seqid);
+  void syncComplete(std::string& _return, const std::string& ip) override;
+  int32_t send_syncComplete(const std::string& ip);
+  void recv_syncComplete(std::string& _return, const int32_t seqid);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

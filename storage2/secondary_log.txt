@@ -1,0 +1,4 @@
+PUT abcd col val
+PUT defg col val2
+PUT abce col val
+PUT abcc col val2
