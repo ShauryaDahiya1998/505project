@@ -80,6 +80,14 @@
             align-items: flex-start;
             justify-content: flex-start;
         }
+        .drive-section-folders {
+            margin-left: 300px; 
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
         .file-icon {
             width: 100px;
             height: 120px;
@@ -108,6 +116,19 @@
             position: fixed;
             right: 10px;
             bottom: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: navy;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #create-folder-button {
+            position: fixed;
+            right: 10px;
+            bottom: 60px;
             padding: 10px 20px;
             font-size: 18px;
             background-color: navy;
@@ -214,6 +235,24 @@
             object-fit: contain; /* Makes the image scale to maintain its aspect ratio without cropping */
         }
 
+        .breadcrumbs {
+            padding: 10px 25px; /* Same horizontal padding as the navbar for alignment */
+            font-size: 1em;
+            background-color: #f8f9fa; /* Light background to differentiate from the navbar */
+            color: navy; /* Color to match the navbar for consistency */
+            border-bottom: 1px solid #ddd; /* Subtle separation from the content below */
+        }
+
+        .breadcrumbs a {
+            color: navy;
+            text-decoration: none; /* No underlines to keep it clean */
+            margin-right: 10px;
+        }
+
+        .breadcrumbs a:hover {
+            text-decoration: underline; /* Basic interaction feedback */
+        }
+
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
             to {top: 0; opacity: 1}
@@ -232,6 +271,9 @@
         <p class="welcome-message">Welcome,<span  id="username"> ....</span>!</p>
         </div>
     </div>
+    <div id="breadcrumbs" class="breadcrumbs">
+        <a href="#home">Home</a> <!-- Static home link -->
+    </div>
 
     <div class="sidebar">
         <div class="service">
@@ -241,11 +283,13 @@
             <div class="service-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
         </div>
     </div>
-
 <section class="drive-section" id="drive-section">
-    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp .mp3" onchange="handleFilesUpload()">
+</section>
+<input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp .mp3" onchange="handleFilesUpload()">
+<section class="drive-section-folders" id="drive-section-folders">
 </section>
 
+<button id="create-folder-button">Create folder</button>
 <button id="add-file-button">Add New File</button>
 
 <div id="fileModal" class="modal">
@@ -272,19 +316,77 @@
 
 <script>
 
-function closeLightbox() {
-    document.getElementById('imageLightbox').style.display = 'none';
-}
+    let currentPath;
+    function closeLightbox() {
+        document.getElementById('imageLightbox').style.display = 'none';
+    }
     document.addEventListener('DOMContentLoaded', () => {
+        currentPath = [];
         fetchUsername();
         fetchFiles();
         document.getElementById('add-file-button').addEventListener('click', triggerFileUpload);
+        document.getElementById('create-folder-button').addEventListener('click', triggerFolderCreation);
     });
-
-    function triggerFileUpload() {
-        document.getElementById('file-upload').click();
-    }
-
+    
+            function triggerFileUpload() {
+                document.getElementById('file-upload').click();
+            }
+    
+            function triggerFolderCreation() {
+                const folderName = prompt('Enter the name of the folder');
+                if (folderName) {
+                    createFolder(folderName);
+                }
+            }
+            function createFolder(folderName) {
+                const payload = JSON.stringify({ folderName, path: currentPath});
+                console.log(payload);
+                fetch('http://localhost:8080/createFolder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: payload
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("look here-> ",data)
+                    console.log('Folder created successfully', data);
+                    const section = document.getElementById('drive-section-folders');
+                    const folderIcon = createFileIcon(folderName, 'folder');
+                    section.appendChild(folderIcon);
+                })
+                .catch(error => console.error('Error creating folder:', error));
+            }
+        
+            function updateBreadcrumbs() {
+                const breadcrumbsDiv = document.getElementById('breadcrumbs');
+                breadcrumbsDiv.innerHTML = '<a href="#" onclick="navigateTo(\'/\')">Home</a>'; // Reset to include Home link
+        
+                let path = '';
+                currentPath.forEach((folder, index) => {
+                    path += '/' + folder;
+                    breadcrumbsDiv.innerHTML += ` > <a href="#" onclick="navigateTo('${path}')">${folder}</a>`;
+                });
+            }
+        
+            function navigateTo(path) {
+                event.preventDefault(); 
+                currentPath = path.split('/').filter(Boolean); // Update the currentPath based on the clicked path
+                updateBreadcrumbs();
+                fetchFiles();
+            }
+        
+            function enterFolder(folderName) {
+                currentPath.push(folderName); // Add new folder to path
+                updateBreadcrumbs();
+                fetchFiles();
+            }
+        
+            function leaveFolder() {
+                currentPath.pop(); // Go back to the previous folder
+                updateBreadcrumbs();
+                fetchFiles();
+            }
+    
     function handleFilesUpload() {
     var files = document.getElementById('file-upload').files;
     if (files.length === 0) return;
@@ -300,12 +402,20 @@ function closeLightbox() {
 
         // Function to upload a chunk
         function uploadChunk(chunkData, currentOffset,index) {
+            // get the current folder
+            let currentFolder;
+            if (currentPath.length === 0) {
+                currentFolder = 'root';
+            } else {
+                currentFolder = currentPath[currentPath.length - 1];
+            }
             // Prepare data to be sent
             const payload = JSON.stringify({
                 fileContent: chunkData,
                 fileName: file.name,
                 fileType: file.type,
-                filePosition: currentOffset
+                filePosition: currentOffset,
+                folderName: currentFolder
             });
 
             // console.log(chunkData);
@@ -330,6 +440,7 @@ function closeLightbox() {
             .catch(error => console.log('Error uploading the chunk', error));
         }
 
+
         // Function to read the nxxt chunk and then upload it
         function readNextChunk(index) {
             console.log("CHink done ",index);
@@ -349,8 +460,34 @@ function closeLightbox() {
     });
 
     document.getElementById('file-upload').value = ''; // Reset the input after processing
-}
+    }   
 
+    function deleteFolderOrFile(fileName, fileType) {
+        // Get the current folder
+        let currentFolder;
+        if (currentPath.length === 0) {
+            currentFolder = 'root';
+        } else {
+            currentFolder = currentPath[currentPath.length - 1];
+        }
+        // Make a call to deleteFile to delete the file
+        const payload = JSON.stringify({
+            fileName: fileName,
+            fileType: fileType,
+            folderName: currentFolder
+        })
+        fetch('http://localhost:8080/deleteFile', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: payload
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('File deleted successfully', data);
+            fetchFiles();
+        })
+        .catch(error => console.error('Error deleting file:', error));
+    }
 
     function createFileIcon(fileName, fileType) {
     const icon = document.createElement('div');
@@ -359,56 +496,89 @@ function closeLightbox() {
     iconImg.className = 'fas ' + determineIcon(fileName);
     const text = document.createElement('div');
     text.textContent = fileName;
-    icon.appendChild(iconImg);
-    icon.appendChild(text);
-    icon.onclick = function() {
-        const isSelected = icon.classList.toggle('selected');
-        if (isSelected) {
-            let chunks = [];  
-            let fileType="" ;
-            let fileTime="";
-            function fetchNextChunk(chunkIndex) {
-                const payload = JSON.stringify({
-                    fileName: fileName,
-                    chunkIndex : String(chunkIndex)
-                });
-                fetch('http://localhost:8080/viewFile', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: payload
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data!=null) {
-                        fileType = data.fileType;
-                        fileTime = data.time;
-                        // console.log("DATA", data.fileContent)
-                        // console.log(decodeBase64(data.fileContent));
-                    
-                        chunks.push(decodeBase64(data.fileContent));  
-                        chunkIndex++;  
-                        fetchNextChunk(chunkIndex);  
-                    }
-                    else{
-                        console.log(payload, chunks);
-                    let fullData =chunks.join('');
-                    // console.log(fullData);
-                    if(fileType.startsWith('image/'))
-                        displayImage(chunks, fileName, fileTime);
-                    else if(fileType.startsWith('audio/'))
-                        displayAudio(fullData, fileName, fileTime);
-                    else
-                        showModal(fullData,fileName,fileTime);
-                    }
-                })
-                .catch(error => console.log('Error selecting file:', error));
-            
-            }
-            fetchNextChunk(0); 
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'X';
+    deleteBtn.style = 'padding: 5px 10px; margin-bottom: 20px; background-color: red; color: white; border-radius: 5px; cursor: pointer;';
+    deleteBtn.onclick = function() {
+        if (confirm('Are you sure you want to delete ' + fileName + '?')) {
+            // Assuming you have a function that handles the delete
+            deleteFolderOrFile(fileName, "txt");
         }
     };
+    icon.appendChild(deleteBtn);
+    icon.appendChild(iconImg);
+    icon.appendChild(text);
+    
+    if (fileType == 'folder') {
+        icon.onclick = function() {
+            enterFolder(fileName);
+        };
+    } else {
+        icon.onclick = function() {
+            const isSelected = icon.classList.toggle('selected');
+            if (isSelected) {
+                let chunks = [];  
+                let fileType="" ;
+                let fileTime="";
+                function fetchNextChunk(chunkIndex) {
+                    let currentFolder;
+                    if (currentPath.length === 0) {
+                        currentFolder = 'root';
+                    } else {
+                        currentFolder = currentPath[currentPath.length - 1];
+                    }
+                    const payload = JSON.stringify({
+                        fileName: fileName,
+                        chunkIndex : String(chunkIndex),
+                        folderName: currentFolder
+                    });
+                    fetch('http://localhost:8080/viewFile', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: payload
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // check if object is empty
+                        if (data!=null && Object.keys(data).length === 0) {
+                            console.log('No files found');
+                            // clear the section
+                            document.getElementById('drive-section').innerHTML = '';
+                            return;
+                        }
+                        if (data!=null) {
+                            fileType = data.fileType;
+                            fileTime = data.time;
+                            // console.log("DATA", data.fileContent)
+                            // console.log(decodeBase64(data.fileContent));
+                        
+                            chunks.push(decodeBase64(data.fileContent));  
+                            chunkIndex++;  
+                            fetchNextChunk(chunkIndex);  
+                        }
+                        else{
+                            console.log(payload, chunks);
+                        let fullData =chunks.join('');
+                        // console.log(fullData);
+                        if(fileType.startsWith('image/'))
+                            displayImage(chunks, fileName, fileTime);
+                        else if(fileType.startsWith('audio/'))
+                            displayAudio(fullData, fileName, fileTime);
+                        else
+                            showModal(fullData,fileName,fileTime);
+                        }
+                    })
+                    .catch(error => console.log('Error selecting file:', error));
+                
+                }
+                fetchNextChunk(0); 
+            }
+        };
+    }
     return icon;
 }
+
 
 function showLightbox() {
     document.getElementById('imageLightbox').style.display = 'block';
@@ -536,17 +706,37 @@ function determineIcon(fileName) {
             return 'fas fa-file-image';
         case 'zip':
             return 'fas fa-file-archive';
+        case 'folder':
+            return 'fas fa-folder';
         default:
             return 'fas fa-file';
     }
 }
 
     function fetchFiles() {
-        fetch('http://localhost:8080/getFiles', {
-            method: 'GET',
+        let currentFolder;
+        console.log(currentPath)
+        if (currentPath.length === 0) {
+            currentFolder = 'root';
+        } else {
+            currentFolder = currentPath[currentPath.length - 1];
+        }
+        fetch(`http://localhost:8080/getFiles`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ folderName: currentFolder })
         })
         .then(response => response.json())
         .then(files => {
+            console.log(files)
+            // check if list is empty
+            if (Object.keys(files).length === 0) {
+                console.log('No files found');
+                // clear the section
+                document.getElementById('drive-section').innerHTML = '';
+                return;
+            }
+            document.getElementById('drive-section').innerHTML = '';
             const section = document.getElementById('drive-section');
             files.forEach(file => {
                 const fileIcon = createFileIcon(file.name, file.type);
@@ -554,6 +744,32 @@ function determineIcon(fileName) {
             });
         })
         .catch(error => console.error('Error fetching files:', error));
+
+        let payload = JSON.stringify({ path: currentPath });
+        fetch('http://localhost:8080/fetchFolders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: payload
+        })
+        .then(response => response.json())
+        .then(folders => {
+            // check if object is empty
+            document.getElementById('drive-section-folders').innerHTML = '';
+            if (Object.keys(folders).length === 0) {
+                console.log('No folders found');
+                // clear the section
+                document.getElementById('drive-section-folders').innerHTML = '';
+                return;
+            }
+            const section = document.getElementById('drive-section-folders');
+            folders.forEach(folder => {
+                const folderIcon = createFileIcon(folder, 'folder');
+                section.appendChild(folderIcon);
+            });
+            // Update your UI with the new contents
+        })
+        .catch(error => console.error('Error fetching folders:', error));
+
     }
 
     function fetchUsername() {
