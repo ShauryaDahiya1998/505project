@@ -28,16 +28,19 @@
 #include <thrift/protocol/TBinaryProtocol.h>
 #include "gen-cpp/StorageOps.h"
 #include "gen-cpp/KvsCoordOps.h"
+#include "gen-cpp/FrontEndCoordOps.h"  
+
 
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 using namespace storage;
+using namespace FrontEndCoordOps;
 using namespace std;
 
 
 
-#define PORT 8080
+#define PORT 9000
 #define BUFFER_SIZE 8000000
 
 
@@ -193,6 +196,24 @@ std::tuple<std::shared_ptr<TTransport>, StorageOpsClient> getKVSClient(string ip
     return std::make_tuple(transport, client);
 }
 
+void informConnectionClose(){
+    std::shared_ptr<TSocket> socket(new TSocket("127.0.0.1", 9090));
+    std::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    FrontEndCoordOpsClient client(protocol);
+
+    try {
+        transport->open();  
+        std::string serverIp = "127.0.0.1";
+        string serverPort = "9000";
+        client.notifyConnectionClosed(serverIp, serverPort);
+        std::cout << "Notified server closure for: " << serverIp << ":" << serverPort << std::endl;
+        transport->close();  // Close the transport
+    } catch (TException& tx) {
+        std::cerr << "ERROR: " << tx.what() << std::endl;
+    }
+}
+
 
 // Worker function to handle the client requests
 void *worker(void *arg) {
@@ -319,6 +340,7 @@ void *worker(void *arg) {
   mtx.lock();
   transport->close();
   //Print the debug message if the debug flag is set
+  informConnectionClose();
   if (debugFlag == 1) {
     cerr << "[" << fd<<"] Connection closed\r\n";
   }
@@ -367,7 +389,7 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR1, &sa1, nullptr);
   
   //Default port number and debug flag
-  int portNumber = 8080;
+  int portNumber = 9000;
   int debugFlag = 0;
   
   //Initial number of connections
@@ -418,8 +440,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     pthread_detach(smtpThread);
-
-
     // Continue with the rest of the main server initialization
     std::cout << "Main server is starting..." << std::endl;
 

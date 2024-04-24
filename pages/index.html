@@ -313,6 +313,8 @@ function showPopup(message, clearFields, success) {
 
 function login() {
   // Your existing login function
+  console.log(url);
+  var url = window.location.origin;
   var user = document.getElementById('username').value;
   var password = document.getElementById('password').value;
 
@@ -323,7 +325,7 @@ function login() {
     // Define the payload
     const data = { username: user, password: password };
 
-    fetch('http://localhost:8080/login', {
+    fetch(url+'/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -340,7 +342,7 @@ function login() {
       } else {
         // Show popup for successful account creation and redirect to login
         window.location.href = '/landing';
-        fetch('http://localhost:8080/landing', {
+        fetch(url+'/landing', {
           method: 'GET',
         })
         .then(response => response.json())
@@ -362,6 +364,8 @@ function login() {
 }
 
 function signup() {
+  console.log(url);
+  var url = window.location.origin;
   var username = document.getElementById('username').value;
   var password = document.getElementById('password').value;
 
@@ -370,7 +374,7 @@ function signup() {
   } else {
     const data = { username: username, password: password };
 
-    fetch('http://localhost:8080/signup', {
+    fetch(url + '/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -617,8 +617,10 @@ let emailArray = [];
 function openFilePanel() {
     document.getElementById('filePanel').style.display = 'block';
     toggleDropdown();
+    console.log(url);
+    var url = window.location.origin;
 
-    fetch('http://localhost:8080/getFiles', { method: 'GET' })
+    fetch(url+'/getFiles', { method: 'GET' })
         .then(response => response.json())
         .then(files => {
             const fileList = document.getElementById('fileList');
@@ -648,7 +650,9 @@ function openFilePanel() {
 function selectFile(fileId) {
 
     // Make API call to get file details
-    fetch('http://localhost:8080/viewFile', {
+    console.log(url);
+    var url = window.location.origin;
+    fetch(url+'/viewFile', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ fileName: fileId, chunkIndex : "0"})
@@ -879,7 +883,9 @@ function sendEmailWithData(email, subject, body, attachments) {
     };
 
     console.log(data);
-    fetch('http://localhost:8080/sendEmail', {
+    console.log(url);
+    var url = window.location.origin;
+    fetch(url+'/sendEmail', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -912,7 +918,9 @@ function sendEmailWithData(email, subject, body, attachments) {
     let expandedEmails = new Set(); 
 
     function fetchEmails() {
-        fetch('http://localhost:8080/getMail', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/getMail', {
             method: 'GET',
             })
             .then(response => response.json())
@@ -923,7 +931,9 @@ function sendEmailWithData(email, subject, body, attachments) {
     }
 
     function fetchUsername() {
-        fetch('http://localhost:8080/getUser', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/getUser', {
             method: 'GET',
             })
             .then(response => response.json())
@@ -1111,13 +1121,15 @@ function replyEmail(emailId,sender,subject) {
 }
 
 function sendReply() {
+    console.log(url);
+  var url = window.location.origin;
     var email = document.getElementById('replyTo').value
     var subject = document.getElementById('replySubject').value;
     var body = document.getElementById('replyBody').value;
     const data = { email: email, subject: subject, body: body};
 
 
-    fetch('http://localhost:8080/sendEmail', {
+    fetch(url+'/sendEmail', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -1130,7 +1142,7 @@ function sendReply() {
         alert("Error")
     } else {
         window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox', {
+        fetch(url+'/mailbox', {
         method: 'GET',
         })
         .then(response => response.json())
@@ -1269,8 +1281,10 @@ function base64ToBlob(base64, type = 'application/octet-stream') {
 function deleteEmail(index,hash) {
     const data = { emailHash: hash};
 
+    console.log(url);
+    var url = window.location.origin;
     console.log(`Delete email at hash: ${index}`);
-    fetch('http://localhost:8080/deleteEmail', {
+    fetch(url+'/deleteEmail', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -1283,7 +1297,7 @@ function deleteEmail(index,hash) {
         alert("Error")
     } else {
         window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox', {
+        fetch(url+'/mailbox', {
         method: 'GET',
         })
         .then(response => response.json())
@@ -1307,8 +1321,10 @@ function deleteEmail(index,hash) {
 }
 
 function fetchMailboxPage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox',{
+        fetch(url+'/mailbox',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -1322,8 +1338,10 @@ function fetchMailboxPage() {
     }
         
     function fetchDrivePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/drive';
-        fetch('http://localhost:8080/drive',{
+        fetch(url+'/drive',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -1337,8 +1355,10 @@ function fetchMailboxPage() {
     }
 
     function fetchHomePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/landing';
-        fetch('http://localhost:8080/landing',{
+        fetch(url+'/landing',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -1351,7 +1371,9 @@ function fetchMailboxPage() {
         });
     }
     function logout() {
-        fetch('http://localhost:8080/logout', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/logout', {
             method: 'GET',
         })
         .then(response => {

@@ -269,7 +269,6 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
     } else if (command == "/login") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Contact Us</h1>";
     } else if (command == "/deleteFile") {
-        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>deleteFile</h1>";
     } else if (command == "/createFile") {
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;

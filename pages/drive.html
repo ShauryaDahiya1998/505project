@@ -73,36 +73,47 @@
             border-radius: 8px; /* Rounded corners */
         }
         .drive-section {
-            margin-left: 300px; 
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columns with equal width */
+            grid-auto-rows: 150px; /* consistent row height */
+            gap: 10px; /* space between grid items */
+            justify-items: center; /* center items horizontally */
+            align-items: start; /* Align to the start of the grid cell vertically */
+            margin-left: 250px; /* Same as the width of the sidebar */
             padding: 1rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            justify-content: flex-start;
+            overflow-y: auto; /* Add scroll if the content is longer than the screen */
+            /* Ensure the drive-section doesn't grow beyond its grid definition */
+            max-width: calc(100vw - 250px); /* adjust this as necessary */
         }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columns with equal width */
+            grid-auto-rows: 150px; /* consistent row height */
+            gap: 10px; /* space between grid items */
+            justify-items: center; /* center items horizontally */
+        }
+
         .file-icon {
-            width: 100px;
-            height: 120px;
-            margin: 10px;
-            text-align: center;
-            padding: 10px;
-            background-color: white;
-            border: 1px solid black;
-            border-radius: 5px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .file-icon.selected {
-            transform: scale(1.1);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            justify-content: center; /* center content vertically */
+            width: 100%; /* full width of the grid column */
+            flex: 0 0 auto; /* Do not grow or shrink */
         }
         .file-icon i {
-            font-size: 30px;
-            margin-bottom: 5px;
+            font-size: 48px; /* larger icons */
+            margin-bottom: 8px; /* space between icon and text */
+        }
+        .file-name {
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 90%; /* Set max width to prevent overflow */
+            font-size: 16px; /* Set font size for readability */
+            margin-top: 8px; /* Space between icon and text */
+            width: 100%; /* This will ensure the text has a limit to start the ellipsis effect */
         }
         #add-file-button {
             position: fixed;
@@ -214,6 +225,30 @@
             object-fit: contain; /* Makes the image scale to maintain its aspect ratio without cropping */
         }
 
+        .upload-popup {
+            position: fixed;
+            bottom: 10px;          /* Positioned at the bottom */
+            left: 300px;            /* 10px from the left, adjust if you have a sidebar */
+            width: 300px;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        progress {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        #upload-status {
+            text-align: center;
+            font-size: 14px;
+        }
+
+
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
             to {top: 0; opacity: 1}
@@ -243,8 +278,14 @@
     </div>
 
 <section class="drive-section" id="drive-section">
-    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp .mp3" onchange="handleFilesUpload()">
+    <input type="file" id="file-upload" multiple style="display: none;" accept=".txt, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp, .mp3, .mp4" onchange="handleFilesUpload()">
+    <div id="upload-popup" class="upload-popup">
+        <progress id="upload-progress" value="0" max="100"></progress>
+        <div id="upload-status"></div>
+    </div>
 </section>
+
+
 
 <button id="add-file-button">Add New File</button>
 
@@ -270,12 +311,19 @@
     </div>
 </div>
 
+<div class="container">
+    <!-- File icons will be appended here via JavaScript -->
+</div>
+
 <script>
 
 function closeLightbox() {
     document.getElementById('imageLightbox').style.display = 'none';
 }
     document.addEventListener('DOMContentLoaded', () => {
+        const popup = document.getElementById('upload-popup');
+        popup.style.display = 'none'; // Show the popup
+
         fetchUsername();
         fetchFiles();
         document.getElementById('add-file-button').addEventListener('click', triggerFileUpload);
@@ -285,18 +333,32 @@ function closeLightbox() {
         document.getElementById('file-upload').click();
     }
 
+    function addFileIcon(container, fileName, fileType) {
+        const icon = createFileIcon(fileName, fileType);
+        container.appendChild(icon);
+    }
+
     function handleFilesUpload() {
     var files = document.getElementById('file-upload').files;
     if (files.length === 0) return;
 
     const section = document.getElementById('drive-section');
+    const popup = document.getElementById('upload-popup');
+    const progress = document.getElementById('upload-progress');
+    const status = document.getElementById('upload-status');
+
     Array.from(files).forEach(file => {
-        const fileIcon = createFileIcon(file.name, file.type);
-        section.appendChild(fileIcon);
+        const container = document.querySelector('.container');
+        addFileIcon(container, file.name, file.type);
 
         const chunkSize = 10240; 
         let offset = 0; // Offset for slicing the file
         idx = 0;
+
+        popup.style.display = 'block'; // Show the popup
+        progress.value = 0;
+        progress.max = file.size;
+        status.textContent = 'Uploading...';
 
         // Function to upload a chunk
         function uploadChunk(chunkData, currentOffset,index) {
@@ -309,8 +371,9 @@ function closeLightbox() {
             });
 
             // console.log(chunkData);
-
-            fetch('http://localhost:8080/createFile', {
+            console.log(url);
+            var url = window.location.origin;
+            fetch(url+'/createFile', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json','Content-Range': index},
                 body: payload
@@ -321,13 +384,23 @@ function closeLightbox() {
             .then(data => {
                 // console.log('Chunk uploaded successfully', data);
                 offset += chunkSize;
+                progress.value = offset; // Update the progress bar
+                progress.max = file.size;
                 if (offset < file.size) {
                     readNextChunk(index+1); // Read and send the next chunk
                 } else {
+                    status.textContent = 'File uploaded successfully'; // Update status
                     console.log('File uploaded successfully');
+                    setTimeout(() => { popup.style.display = 'none'; }, 2000); // Hide popup after 2 seconds
+
                 }
             })
-            .catch(error => console.log('Error uploading the chunk', error));
+            .catch(error => {
+                console.log('Error uploading the chunk', error)
+                status.textContent = 'Error uploading file';
+                popup.style.display = 'none'; // Hide popup on error
+            });
+            
         }
 
         // Function to read the nxxt chunk and then upload it
@@ -340,6 +413,8 @@ function closeLightbox() {
             };
             fileReader.onerror = function(error) {
                 console.error('Error reading chunk', error);
+                status.textContent = 'Error reading file';
+                popup.style.display = 'none'; // Hide popup on error
             };
             fileReader.readAsDataURL(nextChunk);
         }
@@ -353,14 +428,22 @@ function closeLightbox() {
 
 
     function createFileIcon(fileName, fileType) {
-    const icon = document.createElement('div');
+        console.log(url);
+  var url = window.location.origin;
+        const icon = document.createElement('div');
     icon.className = 'file-icon';
+    icon.style.flexDirection = 'column'; // Adjust direction to column
+
     const iconImg = document.createElement('i');
-    iconImg.className = 'fas ' + determineIcon(fileName);
+    iconImg.className = 'fas ' + determineIcon(fileName, fileType);
+    icon.appendChild(iconImg);
+
     const text = document.createElement('div');
     text.textContent = fileName;
-    icon.appendChild(iconImg);
+    text.className = 'file-name';
     icon.appendChild(text);
+    
+        
     icon.onclick = function() {
         const isSelected = icon.classList.toggle('selected');
         if (isSelected) {
@@ -372,7 +455,7 @@ function closeLightbox() {
                     fileName: fileName,
                     chunkIndex : String(chunkIndex)
                 });
-                fetch('http://localhost:8080/viewFile', {
+                fetch(url+'/viewFile', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: payload
@@ -396,7 +479,9 @@ function closeLightbox() {
                     if(fileType.startsWith('image/'))
                         displayImage(chunks, fileName, fileTime);
                     else if(fileType.startsWith('audio/'))
-                        displayAudio(fullData, fileName, fileTime);
+                        displayAudio(chunks, fileName, fileTime);
+                    else if(fileType.startsWith('video/'))
+                        displayVideo(chunks, fileName, fileTime);
                     else
                         showModal(fullData,fileName,fileTime);
                     }
@@ -452,20 +537,42 @@ function displayImage(base64Chunks, fileName, time) {
     showLightbox(); // Open the lightbox to show the image
 }
 
-function displayAudio(base64Url, fileName, time) {
-    var mediaElement = document.createElement('audio');
 
-    mediaElement.src = base64Url;
-    mediaElement.alt = fileName;
-    mediaElement.title = "Uploaded on " + time;
-    mediaElement.controls = true;
+function displayAudio(base64Chunks, fileName, time) {
+    let blobs = base64Chunks.map(chunk => base64ToBlob(chunk, 'audio/mp3'));
+    let audioBlob = new Blob(blobs, {type:  'audio/mp3'});
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    const audioElement = new Audio(audioUrl);
+    audioElement.controls = true;
 
     var headerElement = document.getElementById('imageName');
     headerElement.textContent = fileName;
 
     var displayArea = document.getElementById('imageDisplayArea');
     displayArea.innerHTML = ''; // Clear previous contents
-    displayArea.appendChild(mediaElement); // Add the new image
+    displayArea.appendChild(audioElement); // Add the new image
+
+    showLightbox(); // Open the lightbox to show the image
+}
+
+function displayVideo(base64Chunks, fileName, time) {
+    let blobs = base64Chunks.map(chunk => base64ToBlob(chunk, 'video/mp4'));
+    let videoBlub = new Blob(blobs, {type:  'video/mp4'});
+    const videoUrl = URL.createObjectURL(videoBlub);
+
+    const videoElement = document.createElement('video');
+    videoElement.src = videoUrl;
+    videoElement.controls = true;
+    videoElement.width = 640;  // Set the desired width or make it responsive
+    videoElement.height = 480; // Set the desired height
+    
+    var headerElement = document.getElementById('imageName');
+    headerElement.textContent = fileName;
+
+    var displayArea = document.getElementById('imageDisplayArea');
+    displayArea.innerHTML = ''; // Clear previous contents
+    displayArea.appendChild(videoElement); // Add the new image
 
     showLightbox(); // Open the lightbox to show the image
 }
@@ -517,32 +624,41 @@ function showModal(data, fileName,time) {
         }
     };
 }
-function determineIcon(fileName) {
+function determineIcon(fileName, fileType) {
     const extension = fileName.split('.').pop().toLowerCase();
-    switch(extension) {
+    let iconName;
+    switch (extension) {
         case 'pdf':
-            return 'fas fa-file-pdf';
-        case 'txt':
-            return 'fas fa-file-alt';
-        case 'doc':
-        case 'docx':
-            return 'fas fa-file-word';
-        case 'xls':
-        case 'xlsx':
-            return 'fas fa-file-excel';
+            iconName = 'fa-file-pdf'; // Font Awesome PDF icon
+            break;
+        case 'mp4':
+        case 'avi':
+        case 'mov':
+            iconName = 'fa-file-video'; // Font Awesome video file icon
+            break;
+        case 'mp3':
+        case 'wav':
+            iconName = 'fa-file-audio'; // Font Awesome audio file icon
+            break;
+        case 'gif':
+            iconName = 'fa-file-image'; // GIFs treated as images
+            break;
         case 'jpg':
         case 'jpeg':
         case 'png':
-            return 'fas fa-file-image';
-        case 'zip':
-            return 'fas fa-file-archive';
+            iconName = 'fa-file-image'; // General image file icon
+            break;
         default:
-            return 'fas fa-file';
+            iconName = 'fa-file'; // Generic file icon for other file types
+            break;
     }
+    return iconName;
 }
 
     function fetchFiles() {
-        fetch('http://localhost:8080/getFiles', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/getFiles', {
             method: 'GET',
         })
         .then(response => response.json())
@@ -557,7 +673,9 @@ function determineIcon(fileName) {
     }
 
     function fetchUsername() {
-        fetch('http://localhost:8080/getUser', { method: 'GET' })
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/getUser', { method: 'GET' })
         .then(response => response.json())
         .then(username => {
             document.getElementById('username').textContent = username.user;
@@ -566,8 +684,10 @@ function determineIcon(fileName) {
     }
 
     function fetchMailboxPage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox',{
+        fetch(url+'/mailbox',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -581,8 +701,10 @@ function determineIcon(fileName) {
     }
         
     function fetchDrivePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/drive';
-        fetch('http://localhost:8080/drive',{
+        fetch(url+'/drive',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -596,8 +718,10 @@ function determineIcon(fileName) {
     }
 
     function fetchHomePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/landing';
-        fetch('http://localhost:8080/landing',{
+        fetch(url+'/landing',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -610,7 +734,9 @@ function determineIcon(fileName) {
         });
     }
     function logout() {
-        fetch('http://localhost:8080/logout', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/logout', {
             method: 'GET',
         })
         .then(response => {
