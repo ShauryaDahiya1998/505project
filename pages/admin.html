@@ -341,12 +341,24 @@ function updateTable(tableId, newData, previousData) {
 
     tableBody.innerHTML = ''; // Clear previous rows only if there's a change
     newData.forEach(server => {
-        const toggleSwitchHTML = `
+        var toggleSwitchHTML;
+        if(tableId=='serverTable')
+        {
+            toggleSwitchHTML = `
             <label class="switch">
                 <input type="checkbox" ${server.status ? 'checked' : ''}
                     onchange="toggleServer('${server.ip}', ${server.port}, this)">
                 <span class="slider round"></span>
             </label>`;
+        }
+        else{
+            toggleSwitchHTML = `
+            <label class="switch">
+                <input type="checkbox" ${server.status ? 'checked' : ''}
+                    onchange="toggleServerKVS('${server.ip}', ${server.port}, this)">
+                <span class="slider round"></span>
+            </label>`;
+        }
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${server.ip}</td>
