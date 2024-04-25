@@ -278,106 +278,84 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetchNodes();
-            // setInterval(fetchNodes, 1000); 
+            setInterval(fetchNodes, 1000); 
         });
 
-        function fetchNodes() {
-            var mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = '';
-            var serverTable = document.createElement('table');
-            serverTable.id = 'serverTable';
-            mainContent.appendChild(serverTable);
+        let previousServerData = [];
+let previousKVSData = [];
 
-            var thead = serverTable.createTHead();
-            var headerRow = thead.insertRow();
-            var headers = ['IP', 'Port', 'Connections', 'Status'];
-            headers.forEach(headerText => {
-                var header = document.createElement('th');
-                header.textContent = headerText;
-                headerRow.appendChild(header);
-            });
+function fetchNodes() {
+    const mainContent = document.getElementById('mainContent');
+    // Only create tables if they don't exist
+    if (!document.getElementById('serverTable')) {
+        mainContent.innerHTML = ''; // Clear only if tables are not present
+        createTable(mainContent, 'serverTable', ['IP', 'Port', 'Connections', 'Status']);
+        createTable(mainContent, 'storageTable', ['IP', 'Port', '', 'Status']);
+    }
 
-            var tbody = serverTable.createTBody();
-            tbody.id = 'serverTableBody';
+    fetchServers();
+    fetchKVSNodes();
+}
 
-            var storageTable= document.createElement('table');
-            storageTable.id = 'storageTable';
-            mainContent.appendChild(storageTable);
+function createTable(parent, tableId, headers) {
+    const table = document.createElement('table');
+    table.id = tableId;
+    parent.appendChild(table);
 
-            var thead1 = storageTable.createTHead();
-            var headerRow1 = thead1.insertRow();
-            var headers1 = ['IP', 'Port', '', 'Status'];
-            headers1.forEach(headerText => {
-                var header = document.createElement('th');
-                header.textContent = headerText;
-                headerRow1.appendChild(header);
-            });
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+    headers.forEach(headerText => {
+        const header = document.createElement('th');
+        header.textContent = headerText;
+        headerRow.appendChild(header);
+    });
 
-            var tbody1 = storageTable.createTBody();
-            tbody1.id = 'storageTableBody';
+    table.createTBody();
+}
 
-            
+function fetchServers() {
+    const url = window.location.origin + '/admin/nodes';
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            updateTable('serverTable', data, previousServerData);
+            previousServerData = data; // Update the previous state
+        })
+        .catch(error => console.error('Error fetching nodes:', error));
+}
 
-        var url = window.location.origin + '/admin/nodes';
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('serverTableBody');
-                // Clear previous rows
-                tableBody.innerHTML = '';
-                console.log(data);
-                // Append new rows
-                data.forEach(server => {
-                    const row = document.createElement('tr');
-                    console.log(server.port + " " + server.status);
-                    const toggleSwitchHTML = `
-                        <label class="switch">
-                            <input type="checkbox" ${server.status ? 'checked' : ''}
-                                onchange="toggleServer('${server.ip}', ${server.port}, this)">
-                            <span class="slider round"></span>
-                        </label>`;
-                    row.innerHTML = `
-                        <td>${server.ip}</td>
-                        <td>${server.port}</td>
-                        <td>${server.connections}</td>
-                        <td>${toggleSwitchHTML}</td> <!-- Added toggle switch -->                `;
-                    tableBody.appendChild(row);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching nodes:', error);
-            });
-        
-        
-        fetch('http://localhost:9091/admin/kvsNodes')
-            .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('storageTableBody');
-                // Clear previous rows
-                tableBody.innerHTML = '';
-                console.log(data);
-                // Append new rows
-                data.forEach(server => {
-                    const row = document.createElement('tr');
-                    console.log(server.port + " " + server.status);
-                    const toggleSwitchHTML = `
-                        <label class="switch">
-                            <input type="checkbox" ${server.status ? 'checked' : ''}
-                                onchange="toggleServerKVS('${server.ip}', ${server.port}, this)">
-                            <span class="slider round"></span>
-                        </label>`;
-                    row.innerHTML = `
-                        <td>${server.ip}</td>
-                        <td>${server.port}</td>
-                        <td></td>
-                        <td>${toggleSwitchHTML}</td> <!-- Added toggle switch -->                `;
-                    tableBody.appendChild(row);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching nodes:', error);
-            });
-        }   
+function fetchKVSNodes() {
+    fetch('http://localhost:9091/admin/kvsNodes')
+        .then(response => response.json())
+        .then(data => {
+            updateTable('storageTable', data, previousKVSData);
+            previousKVSData = data; // Update the previous state
+        })
+        .catch(error => console.error('Error fetching KVS nodes:', error));
+}
+
+function updateTable(tableId, newData, previousData) {
+    const tableBody = document.getElementById(`${tableId}Body`);
+    // Check if data has changed
+    if (JSON.stringify(newData) === JSON.stringify(previousData)) return; // No change
+
+    tableBody.innerHTML = ''; // Clear previous rows only if there's a change
+    newData.forEach(server => {
+        const toggleSwitchHTML = `
+            <label class="switch">
+                <input type="checkbox" ${server.status ? 'checked' : ''}
+                    onchange="toggleServer('${server.ip}', ${server.port}, this)">
+                <span class="slider round"></span>
+            </label>`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${server.ip}</td>
+            <td>${server.port}</td>
+            <td>${tableId=='storageTable'?'':server.connections}</td>
+            <td>${toggleSwitchHTML}</td>`;
+        tableBody.appendChild(row);
+    });
+}   
 
         function toggleServer(ip, port, element) {
             const isActive = element.checked;
