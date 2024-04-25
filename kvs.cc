@@ -306,28 +306,40 @@ void *sendKeepAlive(void *arg) {
     }
 }
 
-void replicatePut(const string& row, const string& col, const string& value) {
-    
-    for (const auto& replica : replicas) {
-        cout << replica;
-        int retry = 0;
-        size_t colonPos = replica.find(':');
-        string replicaIP = replica.substr(0, colonPos);
-        int replicaPort = stoi(replica.substr(colonPos + 1));
-       
-        ::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
-        ::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-        ::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-        StorageOpsClient client(protocol);
-        try {
-            transport->open();
-            while(!client.replicateData(row, col, value) && retry <3)
-                retry++;
-        }
-        catch (TException &tx) {
-            cerr << "ERROR: " << tx.what() << endl;
-        }
+void forwardToReplica(string replica, const string& row, const string& col, const string& value) {
+    cout << replica;
+    int retry = 0;
+    size_t colonPos = replica.find(':');
+    string replicaIP = replica.substr(0, colonPos);
+    int replicaPort = stoi(replica.substr(colonPos + 1));
+
+    ::shared_ptr<TTransport> socket(new TSocket(replicaIP, replicaPort));
+    ::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    ::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    StorageOpsClient client(protocol);
+    try {
+        transport->open();
+        while(!client.replicateData(row, col, value) && retry <3)
+            retry++;
     }
+    catch (TException &tx) {
+        cerr << "ERROR: " << tx.what() << endl;
+    }
+}
+
+void replicatePut(const string& row, const string& col, const string& value) {
+    //if this node is 0 (primary), replicate on secondary and tertiary
+    //if this node is 1 (secondary), only replicate on tertiary (this node's secondary, original node's tertiary) 
+    //if this node is 2 (tertiary), do not attempt to replicate
+    int which_node = whichNode(row); 
+    if(which_node == 0) {
+        for (const auto& replica : replicas) {
+            forwardToReplica(replica, row, col, value);
+        }
+    } else if(which_node == 1) {
+        forwardToReplica(replicas[1], row, col, value);
+    }
+    
 }
 
 void deleteData(const string& row, const string& col, int which_node) {
@@ -429,10 +441,10 @@ class StorageOpsHandler : virtual public StorageOpsIf {
         return false;
     else
     {
-        tablets[whichNode(row)][row][col] = new_value;
-        replicateData(row, col, new_value);
+        tablets[which_node][row][col] = new_value;
+        replicatePut(row, col, new_value);
         string log = "PUT " + row + " " + col + " " + new_value;
-        writeLog(log, whichNode(row));
+        writeLog(log, which_node);
         return true;
     }
     return false;
