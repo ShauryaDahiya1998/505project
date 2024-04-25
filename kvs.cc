@@ -40,6 +40,7 @@ using namespace  ::storage;
 #define LogCompactSize 100
 
 string dir;
+bool isNodeAlive = true;
 vector<string> logFileNames;
 vector<string> tabletFileNames;
 vector<map<string, map<string, string>>> tablets;
@@ -49,10 +50,29 @@ string my_ip;
 int my_index = 0;
 int num_nodes = 0;
 
+std::string stringToBinary(std::string input) {
+    std::string binaryString;
+    for (char c : input) {
+        binaryString += std::bitset<8>(c).to_string();
+    }
+    return binaryString;
+}
+
+std::string binaryToString(std::string binary) {
+    std::string text = "";
+    for (size_t i = 0; i < binary.length(); i += 8) { // Assuming a space separates every 8 bits
+        // Substring of 8 bits and conversion to char
+        std::string byteString = binary.substr(i, 8);
+        char character = static_cast<char>(std::bitset<8>(byteString).to_ulong());
+        text += character;
+    }
+    // std::cout << text << std::endl;
+    return text;
+}
+
 bool openLogFile(string filename) {
     ofstream *logFileFD = new ofstream;
     logFileFD->open(filename, ios::app); // Open in append mode
-    cout << "DF" << endl;
     logFileFDs.push_back(logFileFD);
     return logFileFD->is_open();
 }
@@ -94,6 +114,17 @@ int whichNode(const string& value) {
         return 2;
     }
     return 0;
+}
+
+void print(){
+    cout << "ROW HERE " << endl;
+    const auto& tablet = tablets.front();
+    for (const auto& row : tablet) {
+        cout << "ROW NEW" << endl;
+        for (const auto& col : row.second) {
+            cout << row.first << " " << col.first << ":" << col.second << endl;
+        }
+    }
 }
 
 void writeTabletToDisk(string filename, int which_tablet) {
@@ -176,16 +207,17 @@ void readConfig(string filename) {
 }
 
 void writeLog(string log, int which_file) {
+    // cout << "WRITING " << log <<" TO " << which_file << endl;
     if (logFileFDs[which_file]->is_open()) {
         *logFileFDs[which_file] << log << endl;
     } else {
         cerr << "Error: Log file is not open." << endl;
     }
-    if(doLogCompact(logFileNames[which_file],LogCompactSize)){
-        writeTabletToDisk(logFileNames[which_file], which_file);
-        logFileFDs[which_file]->close(); 
-        logFileFDs[which_file]->open(logFileNames[which_file], ios::trunc); 
-    }
+    // if(doLogCompact(logFileNames[which_file],LogCompactSize)){
+    //     writeTabletToDisk(logFileNames[which_file], which_file);
+    //     logFileFDs[which_file]->close(); 
+    //     logFileFDs[which_file]->open(logFileNames[which_file], ios::trunc); 
+    // }
 }
 
 
@@ -199,7 +231,7 @@ void replayLogFile(string filename, int which_file){
         string row, col, value;
         if (iss >> command)
         { 
-            // cout << command << endl;
+            cout << command << endl;
             if(command == "PUT") 
             {
                 if (!(iss >> row >> col >> value)) {
@@ -249,59 +281,64 @@ void *sendKeepAlive(void *arg) {
     KvsCoordOpsClient client(protocol);
     while(true) {
         sleep(1);
+        if(!isNodeAlive)
+        {
+            cout<<"SKIPPING KEEP ALIVE" << endl;
+            continue;
+        }
         transport->open();
         string ip;
         cerr<<"\nSENDING KEEP ALIVE WITH IP: "<<my_ip;
         client.keepAlive(ip, my_ip);
-        if(ip != my_ip) {
-            //this node just crashed, it needs to sync with the current primary
-            vector<string> ip_address = splitString(ip, ':');
-            int which_replica = stoi(ip_address[0]);
-            ::shared_ptr<TTransport> sync_socket(new TSocket(ip_address[1], stoi(ip_address[2])));
-            ::shared_ptr<TTransport> sync_transport(new TBufferedTransport(sync_socket));
-            ::shared_ptr<TProtocol> sync_protocol(new TBinaryProtocol(sync_transport));
-            StorageOpsClient sync_client(sync_protocol);
+        // // if(ip != my_ip) {
+        //     //this node just crashed, it needs to sync with the current primary
+        //     vector<string> ip_address = splitString(ip, ':');
+        //     int which_replica = stoi(ip_address[0]);
+        //     ::shared_ptr<TTransport> sync_socket(new TSocket(ip_address[1], stoi(ip_address[2])));
+        //     ::shared_ptr<TTransport> sync_transport(new TBufferedTransport(sync_socket));
+        //     ::shared_ptr<TProtocol> sync_protocol(new TBinaryProtocol(sync_transport));
+        //     StorageOpsClient sync_client(sync_protocol);
 
-            sync_transport->open();
+        //     sync_transport->open();
 
-            string logs_and_table;
+        //     string logs_and_table;
 
-            sync_client.sync(logs_and_table, to_string(which_replica));
-            cerr<<"\nlogs_and_table result: "<<logs_and_table;
+        //     sync_client.sync(logs_and_table, to_string(which_replica));
+        //     cerr<<"\nlogs_and_table result: "<<logs_and_table;
 
-            vector <string> landt = splitString(logs_and_table, '$');
-            cerr<<"\nCHECKPT3";
-            string logs = landt[0];
-            cerr<<"\nCHECKPT4";
-            string tablet = landt[1];
-            cerr<<"\nCHECKPT5";
+        //     vector <string> landt = splitString(logs_and_table, '$');
+        //     cerr<<"\nCHECKPT3";
+        //     string logs = landt[0];
+        //     cerr<<"\nCHECKPT4";
+        //     string tablet = landt[1];
+        //     cerr<<"\nCHECKPT5";
 
-            //write logs.txt to log files[0] and table to tablet files[0]
-            // logFileFDs[0]
-            ofstream outfile(logFileNames[0], ios::trunc);
-            cerr<<"\nCHECKPT6";
+        //     //write logs.txt to log files[0] and table to tablet files[0]
+        //     // logFileFDs[0]
+        //     ofstream outfile(logFileNames[0], ios::trunc);
+        //     cerr<<"\nCHECKPT6";
 
-            if (outfile.is_open()) {
-                outfile << logs;
+        //     if (outfile.is_open()) {
+        //         outfile << logs;
                 
-            } 
-            cerr<<"\nCHECKPT7";
-            outfile.close();
+        //     } 
+        //     cerr<<"\nCHECKPT7";
+        //     outfile.close();
 
-            ofstream tabletoutfile(tabletFileNames[0], ios::trunc);
+        //     ofstream tabletoutfile(tabletFileNames[0], ios::trunc);
 
-            if (tabletoutfile.is_open()) {
-                tabletoutfile << tablet;
+        //     if (tabletoutfile.is_open()) {
+        //         tabletoutfile << tablet;
                 
-            } 
-            tabletoutfile.close();
+        //     } 
+        //     tabletoutfile.close();
 
-            replayLogFile(logFileNames[0], 0);
+        //     replayLogFile(logFileNames[0], 0);
 
-            sync_transport->close();
-            client.syncComplete(ip, my_ip);
+        //     sync_transport->close();
+        //     client.syncComplete(ip, my_ip);
 
-        }
+        // }
         transport->close();
     }
 }
@@ -309,7 +346,6 @@ void *sendKeepAlive(void *arg) {
 void replicatePut(const string& row, const string& col, const string& value) {
     
     for (const auto& replica : replicas) {
-        cout << replica;
         int retry = 0;
         size_t colonPos = replica.find(':');
         string replicaIP = replica.substr(0, colonPos);
@@ -361,10 +397,14 @@ class StorageOpsHandler : virtual public StorageOpsIf {
 
   bool put(const string& row, const string& col, const string& value) {
     // Your implementation goes here
-    tablets[whichNode(row)][row][col] = value;
-    replicatePut(row,col,value);
-    string log = "PUT " + row + " " + col + " " + value;
+    std::string bytesData = stringToBinary(value);
+
+    tablets[whichNode(row)][row][col] = bytesData;
+    cout << whichNode(row) << " "<< tablets[whichNode(row)][row][col] << endl;
+    replicatePut(row,col,bytesData);
+    string log = "PUT " + row + " " + col + " " + bytesData;
     writeLog(log, whichNode(row));
+    print();
     return true;
   }
 
@@ -391,7 +431,7 @@ class StorageOpsHandler : virtual public StorageOpsIf {
     if(!valueExists(row,col,which_node))
         _return = "-ERR invalid row/column\r\n";
     else
-        _return = tablets[which_node][row][col];
+        _return = binaryToString(tablets[which_node][row][col]);
   }
 
   bool deleteCell(const string& row, const string& col) {
@@ -471,7 +511,55 @@ class StorageOpsHandler : virtual public StorageOpsIf {
 
   }
 
+  void setAlive(const bool isAlive) {
+    if(!isAlive)
+    {
+        isNodeAlive = isAlive;
+        tablets.clear();
+    }
+    else{
+        map<string, map<string, string>> primary_tablet;
+        map<string, map<string, string>> secondary_tablet;
+        map<string, map<string, string>> tertiary_tablet;
+        tablets.push_back(primary_tablet);
+        tablets.push_back(secondary_tablet);
+        tablets.push_back(tertiary_tablet);
+        replayLogFile(logFileNames[0], 0);
+        replayLogFile(logFileNames[1], 1);
+        replayLogFile(logFileNames[2], 2);
+        print();
+        isNodeAlive = isAlive;
+    }
+  }
+
+  void kvsData(std::string& _return) {
+    std::ostringstream oss;
+    if(tablets.empty())
+    {
+        _return =  oss.str();
+        return;
+    }
+    const auto& tablet = tablets.front();
+    oss << "{";
+    for (const auto& row : tablet) {
+        oss << "\"" << row.first <<"\"" << ":{";
+        for (const auto& col : row.second) {
+            oss << "\"" << col.first << "\""  << ":" << "\"" << binaryToString(col.second) << "\"" << ",";
+        }
+        if (!row.second.empty()) {
+            oss.seekp(-1, std::ios_base::end); // Remove the trailing comma
+        }
+        oss << "},";
+    }
+    if (!tablet.empty()) {
+        oss.seekp(-1, std::ios_base::end); // Remove the trailing comma
+    }
+    oss << "}";
+    _return = oss.str();
+  }
 };
+
+
 
 
 // kvs worker should take in 1. index number for current worker node and 2. directory
@@ -514,6 +602,7 @@ int main(int argc, char *argv[])
     tablets.push_back(primary_tablet);
     tablets.push_back(secondary_tablet);
     tablets.push_back(tertiary_tablet);
+    print();
 
     logFileNames.push_back(dir + "/primary_log.txt");
     logFileNames.push_back(dir + "/secondary_log.txt");

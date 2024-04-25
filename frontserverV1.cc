@@ -181,6 +181,7 @@ void signalHandlerWorkerThread(int signal) {
 string getWorkerIP(string row, KvsCoordOpsClient client){
     string ip;
     client.get(ip,row);
+    cout << "IP " << ip << endl;
     return ip;
 }
 

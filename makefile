@@ -1,27 +1,18 @@
 CXX = aarch64-linux-gnu-g++
-<<<<<<< HEAD
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -w
-LIBS = -lthrift -lssl -lcrypto -lresolv
-=======
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -pthread
-LIBS = -lthrift -lssl -lcrypto
->>>>>>> 93381505996c498860af8f7c65e6912de0c443f7
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -pthread -w
+LIBS = -lthrift -lssl -lcrypto  -lresolv
 
 TARGET = myserver
 # Define source files
 SOURCES = getMethod.cc postMethod.cc httpCreatorSource.cc frontserverV1.cc smtpclient.cc smtp.cc
 
-<<<<<<< HEAD
-KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp 
-=======
 KVS_SERVER = kvs.cc gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp
->>>>>>> 93381505996c498860af8f7c65e6912de0c443f7
 
 KVS_TARGET = kvs 
 
-KVS_CLIENT = client.cc gen-cpp/StorageOps.cpp
+KVS_CLIENT = client.cc gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp
 
-FRONT_COORD = frontEndCoord.cc gen-cpp/FrontEndCoordOps.cpp
+FRONT_COORD = frontEndCoord.cc gen-cpp/FrontEndCoordOps.cpp gen-cpp/StorageOps.cpp
 
 FRONT_COORD_TARGET = frontEndCoord
 
@@ -32,11 +23,14 @@ TEST_CLIENT = testclient.cc gen-cpp/StorageOps.cpp
 
 TEST_CLIENT_TARGET = testclient
 
+KVS_COORD = kvsCoord.cc gen-cpp/KvsCoordOps.cpp gen-cpp/StorageOps.cpp
+
+KVS_COORD_TARGET = kvsCoord
+
 # Automatically generate a list of object files
 OBJECTS = $(SOURCES:.cc=.o)
 # Default target
-
-all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET)  $(FRONT_COORD_TARGET)
+all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET) $(FRONT_COORD_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."
@@ -46,6 +40,9 @@ $(KVS_TARGET): $(KVS_SERVER)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(KVS_CLIENT_TARGET): $(KVS_CLIENT)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+$(KVS_COORD_TARGET): $(KVS_COORD)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(FRONT_COORD_TARGET): $(FRONT_COORD)

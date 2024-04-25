@@ -16,6 +16,8 @@
 #include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
+#include <thrift/transport/TSocket.h>
+#include "gen-cpp/StorageOps.h"
 #include <nlohmann/json.hpp>
 
 using namespace ::FrontEndCoordOps;
@@ -23,6 +25,10 @@ using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
 using namespace ::apache::thrift::transport;
 using namespace ::apache::thrift::server;
+using namespace storage;
+using namespace std;
+
+
 
 struct ServerInfo {
     std::string ip;
@@ -133,6 +139,59 @@ std::string getServerNodesData() {
     return jArray.dump();  
 }
 
+bool setKVSActive(std::string ip,int port,bool isActive){
+    shared_ptr<TTransport> socket(new TSocket(ip,port));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    StorageOpsClient client(protocol);
+    try{
+        transport->open();
+        client.setAlive(isActive);
+        transport->close();
+        return true;
+    }
+    catch (const std::exception &e){
+        return false;
+    }
+}
+
+std::string escapeJSONString(const std::string &s) {
+    std::string escaped;
+    for (char c : s) {
+        switch (c) {
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            // Add more cases if there are other characters to escape.
+            default: escaped += c;
+        }
+    }
+    return escaped;
+}
+
+string getKVSData(std::string ip,int port){
+    shared_ptr<TTransport> socket(new TSocket(ip,port));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    StorageOpsClient client(protocol);
+    try{
+    transport->open();
+    string data;
+    client.kvsData(data);
+    string escapedData = escapeJSONString(data);
+    std::cout << escapedData << endl;
+    nlohmann::json jsonData;
+    if(!escapedData.empty() || escapedData!="")
+        jsonData = nlohmann::json::parse(escapedData);
+    std::cout << jsonData.dump();
+    transport->close();
+    return jsonData.dump();
+    }
+    catch (const std::exception &e){
+        nlohmann::json jsonData;
+        return jsonData.dump();
+    }
+}
+
 int main() {
     loadServerConfig("config.txt");
     if (servers.empty()) {
@@ -192,6 +251,8 @@ int main() {
 
         std::string request(buffer);
         std::string httpResponse;
+        std::cout << request << endl;
+        std::cout << (request.find("POST /admin/inactiveKVS")!=std::string::npos);
 
         // Check if the request is for the root "/" or for "/admin"
         if (request.find("GET / ") != std::string::npos) { // Root path
@@ -232,6 +293,38 @@ int main() {
             httpResponse = "HTTP/1.1 200 OK\r\n";
             httpResponse += "Content-Type: application/json\r\n";
             httpResponse += "\r\n";
+        }else if(request.find("POST /admin/KVSinactive") != std::string::npos){
+            auto header_end = request.find("\r\n\r\n");
+            std::string body = request.substr(header_end + 4);
+            auto parsed = nlohmann::json::parse(body);
+            std::string ip = parsed["ip"];
+            int port = parsed["port"];
+            bool isActive = parsed["active"];
+            std::cout<<"HERE"<< ip << " " << port << " "<< isActive << std::endl;
+            bool result = setKVSActive(ip,port,isActive);
+            if(result)
+            {
+                httpResponse = "HTTP/1.1 200 OK\r\n";
+                httpResponse += "Content-Type: application/json\r\n";
+                httpResponse += "\r\n";
+            }
+            else{
+                httpResponse = "HTTP/1.1 500 Bad Request\r\n";
+                httpResponse += "Content-Type: application/json\r\n";
+                httpResponse += "\r\n";
+            }
+        } else if(request.find("POST /admin/KVSData") != std::string::npos){
+            auto header_end = request.find("\r\n\r\n");
+            std::string body = request.substr(header_end + 4);
+            auto parsed = nlohmann::json::parse(body);
+            std::string ip = parsed["ip"];
+            string port = parsed["port"];
+            string nodesData = getKVSData(ip,stoi(port));
+            httpResponse = "HTTP/1.1 200 OK\r\n";
+            httpResponse += "Content-Type: application/json\r\n";
+            httpResponse += "Content-Length: " + std::to_string(nodesData.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += nodesData;
         }
         else if (request.find("GET /admin") != std::string::npos) { // Admin path
             // Load the admin.html page
@@ -248,8 +341,23 @@ int main() {
                 httpResponse = "HTTP/1.1 404 Not Found\r\n";
                 httpResponse += "Content-Length: 0\r\n\r\n";
             }
-        }
+        } else if (request.find("GET /data") != std::string::npos) { // Admin path
+            // Load the admin.html page
+            cout << "HERE " << endl;
+            std::ifstream file("./pages/data.html");
+            if (file) {
+                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
+                httpResponse = "HTTP/1.1 200 OK\r\n";
+                httpResponse += "Content-Type: text/html\r\n";
+                httpResponse += "Content-Length: " + std::to_string(content.length()) + "\r\n";
+                httpResponse += "\r\n";
+                httpResponse += content;
+            } else {
+                httpResponse = "HTTP/1.1 404 Not Found\r\n";
+                httpResponse += "Content-Length: 0\r\n\r\n";
+            }
+        }
         send(new_socket, httpResponse.c_str(), httpResponse.size(), 0);
         close(new_socket); // Close the socket after sending response
     }   

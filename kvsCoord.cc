@@ -6,13 +6,18 @@
 #include <unistd.h>
 #include <openssl/sha.h>
 #include <sys/stat.h>
-
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <nlohmann/json.hpp>
 #include "gen-cpp/KvsCoordOps.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TSocket.h>
+#include "gen-cpp/StorageOps.h"
 
 
 using namespace apache::thrift;
@@ -20,6 +25,8 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 using namespace ::apache::thrift::server;
 using namespace std;
+using namespace storage;
+
 
 struct kvs_worker {
     bool started = false;
@@ -93,7 +100,6 @@ void *handleKeepAlive(void *arg) {
                         break;
                     }
                 }
-                print_logs("IS ALIVE " + pair.first + " is: " + to_string(is_alive[pair.first]->is_alive));
                 is_alive[pair.first]->is_alive = false;
             }
             // std::cout << "Key: " << pair.first << std::endl;
@@ -103,6 +109,7 @@ void *handleKeepAlive(void *arg) {
 
 void readConfig(std::string filename) {
     // vector <string> nodes;
+    std::cout << "HEE";
     std::ifstream file(filename);
     
     if (!file.is_open()) {
@@ -198,9 +205,97 @@ class KvsCoordOpsHandler : virtual public KvsCoordOpsIf {
             _return = ip;
 
         }
+
+        for (const auto& pair : is_alive) {
+        std::cout << "IP: " << pair.first << " - Worker is alive: " << (pair.second->is_alive ? "Yes" : "No") << std::endl;
+    }
         
     }
 };
+
+void *startSocketServer(void *arg) {
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+    char buffer[1024] = {0};
+    char *hello = "Hello from server";
+
+    // Creating socket file descriptor
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Forcefully attaching socket to the port 9091
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(9091);
+
+    // Forcefully attaching socket to the port 9091
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+    if (listen(server_fd, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+        perror("accept");
+        exit(EXIT_FAILURE);
+    }
+
+    while (true) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+            perror("accept");
+            continue;  // continue accepting other connections
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        long valread = read(new_socket, buffer, 1024);
+        printf("Received: %s\n", buffer);
+        std::string request(buffer);
+        std::string httpResponse;
+        // Check if the request is for /admin/kvsNodes
+        if (strstr(buffer, "GET /admin/kvsNodes") != nullptr) {
+            nlohmann::json jArray = nlohmann::json::array();
+
+            std::string data = "Node information:\n";
+            for (const auto& pair : is_alive) {
+                size_t colonPos = pair.first.find(':');
+                string ip = pair.first.substr(0, colonPos); // Extract the IP part
+                string port = pair.first.substr(colonPos + 1); // 
+                nlohmann::json jObj = {
+                    {"ip", ip},
+                    {"port", port},
+                    {"status", !pair.second->is_crashed},
+                };
+                jArray.push_back(jObj);
+            }
+            httpResponse = "HTTP/1.1 200 OK\r\n";
+            httpResponse += "Content-Type: application/json\r\n";
+            httpResponse += "Content-Length: " + std::to_string(jArray.dump().length()) + "\r\n";
+            httpResponse += "Access-Control-Allow-Origin: *\r\n";
+            httpResponse += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+            httpResponse += "Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization\r\n";
+            httpResponse += "\r\n";
+            httpResponse += jArray.dump();
+            send(new_socket, httpResponse.c_str(), httpResponse.length(), 0);
+        }else {
+            char* notFoundMessage = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found\n";
+            send(new_socket, notFoundMessage, strlen(notFoundMessage), 0);
+        }
+        close(new_socket);
+    }
+    
+    close(server_fd);
+    return NULL;
+}
 
 
 int main(int argc, char *argv[])
@@ -240,6 +335,12 @@ int main(int argc, char *argv[])
     if(pthread_create(&keep_alive_thread, NULL, handleKeepAlive, NULL) != 0) {
         perror("Thread creation failed");
         exit(EXIT_FAILURE);
+    }
+
+    pthread_t socket_thread;
+    if(pthread_create(&socket_thread, NULL, startSocketServer, NULL) != 0) {
+        perror("Failed to create socket thread");
+        return 1;
     }
 
 
