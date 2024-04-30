@@ -338,6 +338,93 @@ function closeLightbox() {
         container.appendChild(icon);
     }
 
+    // function handleFilesUpload() {
+    // var files = document.getElementById('file-upload').files;
+    // if (files.length === 0) return;
+
+    // const section = document.getElementById('drive-section');
+    // const popup = document.getElementById('upload-popup');
+    // const progress = document.getElementById('upload-progress');
+    // const status = document.getElementById('upload-status');
+
+    // Array.from(files).forEach(file => {
+    //     const container = document.querySelector('.container');
+    //     addFileIcon(container, file.name, file.type);
+
+    //     const chunkSize = 10240; 
+    //     let offset = 0; // Offset for slicing the file
+    //     idx = 0;
+
+    //     popup.style.display = 'block'; // Show the popup
+    //     progress.value = 0;
+    //     progress.max = file.size;
+    //     status.textContent = 'Uploading...';
+
+    //     // Function to upload a chunk
+    //     function uploadChunk(chunkData, currentOffset,index) {
+    //         // Prepare data to be sent
+    //         const payload = JSON.stringify({
+    //             fileContent: chunkData,
+    //             fileName: file.name,
+    //             fileType: file.type,
+    //             filePosition: currentOffset
+    //         });
+
+    //         // console.log(chunkData);
+    //         console.log(url);
+    //         var url = window.location.origin;
+    //         fetch(url+'/createFile', {
+    //             method: 'POST',
+    //             headers: {'Content-Type': 'application/json','Content-Range': index},
+    //             body: payload
+    //         })
+    //         .then(response => 
+    //         {
+    //         response.json()})
+    //         .then(data => {
+    //             // console.log('Chunk uploaded successfully', data);
+    //             offset += chunkSize;
+    //             progress.value = offset; // Update the progress bar
+    //             progress.max = file.size;
+    //             if (offset < file.size) {
+    //                 readNextChunk(index+1); // Read and send the next chunk
+    //             } else {
+    //                 status.textContent = 'File uploaded successfully'; // Update status
+    //                 console.log('File uploaded successfully');
+    //                 setTimeout(() => { popup.style.display = 'none'; }, 2000); // Hide popup after 2 seconds
+
+    //             }
+    //         })
+    //         .catch(error => {
+    //             console.log('Error uploading the chunk', error)
+    //             status.textContent = 'Error uploading file';
+    //             popup.style.display = 'none'; // Hide popup on error
+    //         });
+            
+    //     }
+
+    //     // Function to read the nxxt chunk and then upload it
+    //     function readNextChunk(index) {
+    //         console.log("CHink done ",index);
+    //         const fileReader = new FileReader();
+    //         const nextChunk = file.slice(offset, offset + chunkSize);
+    //         fileReader.onload = function(event) {
+    //             uploadChunk(event.target.result, offset,index);
+    //         };
+    //         fileReader.onerror = function(error) {
+    //             console.error('Error reading chunk', error);
+    //             status.textContent = 'Error reading file';
+    //             popup.style.display = 'none'; // Hide popup on error
+    //         };
+    //         fileReader.readAsDataURL(nextChunk);
+    //     }
+
+    //     // Start the upload process with the first chunk
+    //     readNextChunk(idx);
+    // });
+
+
+
     function handleFilesUpload() {
     var files = document.getElementById('file-upload').files;
     if (files.length === 0) return;
@@ -346,83 +433,68 @@ function closeLightbox() {
     const popup = document.getElementById('upload-popup');
     const progress = document.getElementById('upload-progress');
     const status = document.getElementById('upload-status');
+    const url = window.location.origin;
+
+    popup.style.display = 'block'; // Show the popup
+    progress.value = 0;
 
     Array.from(files).forEach(file => {
         const container = document.querySelector('.container');
         addFileIcon(container, file.name, file.type);
 
-        const chunkSize = 10240; 
+        const chunkSize = 10240; // Size of the chunk
         let offset = 0; // Offset for slicing the file
-        idx = 0;
+        let promises = [];
 
-        popup.style.display = 'block'; // Show the popup
-        progress.value = 0;
-        progress.max = file.size;
-        status.textContent = 'Uploading...';
-
-        // Function to upload a chunk
-        function uploadChunk(chunkData, currentOffset,index) {
-            // Prepare data to be sent
+        // Function to prepare and get upload chunk promise
+        function getUploadPromise(chunkData, currentOffset, index) {
             const payload = JSON.stringify({
                 fileContent: chunkData,
                 fileName: file.name,
                 fileType: file.type,
                 filePosition: currentOffset
             });
-
-            // console.log(chunkData);
             console.log(url);
             var url = window.location.origin;
-            fetch(url+'/createFile', {
+            return fetch(url + '/createFile', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json','Content-Range': index},
+                headers: { 'Content-Type': 'application/json', 'Content-Range': index },
                 body: payload
-            })
-            .then(response => 
-            {
-            response.json()})
-            .then(data => {
-                // console.log('Chunk uploaded successfully', data);
-                offset += chunkSize;
-                progress.value = offset; // Update the progress bar
-                progress.max = file.size;
-                if (offset < file.size) {
-                    readNextChunk(index+1); // Read and send the next chunk
-                } else {
-                    status.textContent = 'File uploaded successfully'; // Update status
-                    console.log('File uploaded successfully');
-                    setTimeout(() => { popup.style.display = 'none'; }, 2000); // Hide popup after 2 seconds
-
-                }
-            })
-            .catch(error => {
-                console.log('Error uploading the chunk', error)
-                status.textContent = 'Error uploading file';
-                popup.style.display = 'none'; // Hide popup on error
-            });
-            
+            }).then(response => response.json());
         }
 
-        // Function to read the nxxt chunk and then upload it
-        function readNextChunk(index) {
-            console.log("CHink done ",index);
-            const fileReader = new FileReader();
+        // Read and upload all chunks
+        while (offset < file.size) {
             const nextChunk = file.slice(offset, offset + chunkSize);
-            fileReader.onload = function(event) {
-                uploadChunk(event.target.result, offset,index);
-            };
-            fileReader.onerror = function(error) {
-                console.error('Error reading chunk', error);
-                status.textContent = 'Error reading file';
-                popup.style.display = 'none'; // Hide popup on error
-            };
-            fileReader.readAsDataURL(nextChunk);
+            promises.push(new Promise((resolve) => {
+                const fileReader = new FileReader();
+                fileReader.onload = function (event) {
+                    resolve(getUploadPromise(event.target.result, offset, promises.length));
+                };
+                fileReader.onerror = function (error) {
+                    console.error('Error reading chunk', error);
+                };
+                fileReader.readAsDataURL(nextChunk);
+            }));
+            offset += chunkSize;
         }
 
-        // Start the upload process with the first chunk
-        readNextChunk(idx);
-    });
+        // Wait for all uploads to settle
+        Promise.allSettled(promises).then(results => {
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    console.log(`Chunk ${index} uploaded successfully`);
+                } else {
+                    console.log(`Error uploading chunk ${index}:`, result.reason);
+                }
+            });
 
+            progress.value = file.size; // Update the progress bar to full after all chunks are done
+            status.textContent = 'File uploaded successfully';
+            setTimeout(() => { popup.style.display = 'none'; }, 2000);
+        });
+    });
+    
     document.getElementById('file-upload').value = ''; // Reset the input after processing
 }
 
