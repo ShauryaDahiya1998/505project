@@ -411,7 +411,7 @@
             }
             // Prepare data to be sent
             const payload = JSON.stringify({
-                fileContent: chunkData,
+                fileContent: btoa(chunkData),
                 fileName: file.name,
                 fileType: file.type,
                 filePosition: currentOffset,

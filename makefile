@@ -24,7 +24,7 @@ KVS_CLIENT_TARGET = client
 # Automatically generate a list of object files
 OBJECTS = $(SOURCES:.cc=.o)
 # Default target
-all: $(TARGET) $(KVS_TARGET)
+all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."
@@ -47,4 +47,4 @@ $(KVS_CLIENT_TARGET): $(KVS_CLIENT)
 # Clean the built files
 clean:
 	@echo "Cleaning..."
-	@rm -f $(TARGET) $(OBJECTS) $(KVS_TARGET)
+	@rm -f $(TARGET) $(OBJECTS) $(KVS_TARGET)  $(KVS_COORD_TARGET)

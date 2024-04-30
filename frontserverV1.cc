@@ -209,7 +209,7 @@ void *worker(void *arg) {
 
   //Buffer to store the data received from the client
   char buffer[BUFFER_SIZE];
-
+  //vector<char> buffer;
   //String to store the command received from the client
   string tmpcommand = "";
   string command = "";
@@ -227,10 +227,11 @@ void *worker(void *arg) {
   while (true) {
     //Clear the buffer
     memset(buffer, 0, sizeof(buffer));
-
+    //buffer.clear();
     //Receive the data from the client
+    //buffer.resize(BUFFER_SIZE);
     int len = recv(fd, &buffer, sizeof(buffer), 0);
-    
+    cout<<"here";
     //If the client has closed the connection
     if (len == 0) {
       cerr << "[" << fd<<"] Connection closed by client "<<fd<<endl;
@@ -244,6 +245,8 @@ void *worker(void *arg) {
     }
 
     //If the data is received successfully, add to tempcommand and process the command
+    //string str(buffer.begin(), buffer.end());
+    //tmpcommand = str;
     tmpcommand = buffer;
     string content = "";
     // cout<<tmpcommand<<endl;
