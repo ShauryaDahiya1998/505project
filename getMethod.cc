@@ -53,7 +53,7 @@ std::vector<std::string> splitString(std::string input, std::string delimiter) {
     return result;
 }
 
-string getMethodHandler(string command, KvsCoordOpsClient client) {
+string getMethodHandler(string command, KvsCoordOpsClient client,bool isNodeAlive) {
     string req = command;
     // find the first /
     size_t firstSlash = command.find("/");
@@ -62,8 +62,25 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
     command = command.substr(0, command.find(" "));
     HttpResponseCreator response;
     // handle the commandType and return the appropriate response
-
-    if (command == "/" || command == "/login") {
+    if(!isNodeAlive)
+    {
+        std::cout << "HERE OPS" << isNodeAlive << endl;
+        int cookieIndex = req.find("Cookie: sessionID=");
+        string sessionResp;
+        string sessionID = "1111";
+        if (cookieIndex != -1) {
+            sessionID = req.substr(cookieIndex + 18, 7);
+        } 
+        cout << sessionResp << endl;
+        ifstream ifs("./pages/serverDownPage.html");
+        string homepage((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+        response.content_type = "text/html";
+        response.message = homepage;
+        response.sessionID = sessionID;   
+        string createResponseForPostRequest = response.createGetResponse(response);
+        return createResponseForPostRequest;
+    }
+    else if (command == "/" || command == "/login") {
         //check if the cookie that we got in sessionID exists in cookie map, if yes send hey
         cout<<req<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");

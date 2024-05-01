@@ -101,9 +101,6 @@
         fetchUsername();
         window.history.pushState({ page: "landing" }, "landing", "/landing");
         console.log(window.location.pathname);   
-        document.getElementById('logoutButton').addEventListener('click', function() {
-        logout();
-        }); 
         });
 
     function logout() {

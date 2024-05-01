@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <pthread.h>
 #include "gen-cpp/FrontEndCoordOps.h"
+#include "gen-cpp/FrontEndOps.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
@@ -21,6 +22,7 @@
 #include <nlohmann/json.hpp>
 
 using namespace ::FrontEndCoordOps;
+using namespace ::FrontEndOps;
 using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
 using namespace ::apache::thrift::transport;
@@ -35,6 +37,7 @@ struct ServerInfo {
     int port;
     int connections = 0;
     bool isActive = true;
+    long long lastUpdated;
 };
 
 std::mutex mtx;
@@ -67,6 +70,23 @@ public:
         for (auto& server : servers) {
             if (server.ip == serverIP && server.port == portNum) {
                 server.isActive = false;
+                // std::cout << server.ip << server.port << server.isActive << std::endl;
+            }
+        }
+    }
+
+    void keepAlive(const std::string& serverIP, const std::string& port) {
+        int portNum = std::stoi(port);  // Convert port string to integer
+        std::lock_guard<std::mutex> lock(mtx);  // Lock for thread safety
+        for (auto& server : servers) {
+            if (server.ip == serverIP && server.port == portNum) {
+                server.isActive = true;
+                auto currentTime = std::chrono::system_clock::now();
+                auto duration = currentTime.time_since_epoch();
+                auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+                long long currentTimestamp = milliseconds.count();
+                server.lastUpdated = currentTimestamp;
+                std::cout << server.ip << server.port << server.isActive << std::endl;
             }
         }
     }
@@ -110,6 +130,28 @@ void markInactive(const std::string& serverIP, int portNum, bool isActive) {
         }
     }
 
+// Function to handle keep alive
+void* handleKeepAlive(void* arg) {
+    while (true) {
+        auto currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+        // Iterate through the servers
+        for (auto& server : servers) {
+            if (currentTime - server.lastUpdated > 1000) {
+                server.isActive = false;
+                server.connections = 0;
+            }
+        }
+
+        // Sleep for 2 seconds
+        sleep(2);
+    }
+    return NULL;
+}
+
+
 void *runThriftServer(void *arg) {
     int port = *(int*)arg;
     ::std::shared_ptr<FrontEndCoordOpsHandler> handler(new FrontEndCoordOpsHandler());
@@ -146,6 +188,24 @@ bool setKVSActive(std::string ip,int port,bool isActive){
     StorageOpsClient client(protocol);
     try{
         transport->open();
+        client.setAlive(isActive);
+        transport->close();
+        return true;
+    }
+    catch (const std::exception &e){
+        return false;
+    }
+}
+
+bool setFEActive(std::string ip,int port,bool isActive){
+    int thriftport = port + 92;
+    shared_ptr<TTransport> socket(new TSocket(ip,thriftport));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    FrontEndOpsClient client(protocol);
+    try{
+        transport->open();
+        std::cout << "CALLNI RPC";
         client.setAlive(isActive);
         transport->close();
         return true;
@@ -199,9 +259,19 @@ int main() {
         return 1;
     }
 
+    pthread_t keep_alive_thread;
+
     pthread_t thread_id;
     int thriftPort = 9090;
     pthread_create(&thread_id, NULL, runThriftServer, &thriftPort);
+
+    if(pthread_create(&keep_alive_thread, NULL, handleKeepAlive, NULL) != 0) {
+        perror("Thread creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    pthread_detach(keep_alive_thread);
+
 
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -288,11 +358,21 @@ int main() {
             std::string ip = parsed["ip"];
             int port = parsed["port"];
             bool isActive = parsed["active"];
-            markInactive(ip,port,isActive);
-            std::string nodesData = getServerNodesData();
-            httpResponse = "HTTP/1.1 200 OK\r\n";
-            httpResponse += "Content-Type: application/json\r\n";
-            httpResponse += "\r\n";
+            std::cout << "HERE " << std::endl;
+            bool result = setFEActive(ip,port,isActive);
+            std::cout << "HERE " << result <<  std::endl;
+
+            if(result)
+            {
+                httpResponse = "HTTP/1.1 200 OK\r\n";
+                httpResponse += "Content-Type: application/json\r\n";
+                httpResponse += "\r\n";
+            }
+            else{
+                httpResponse = "HTTP/1.1 500 Bad Request\r\n";
+                httpResponse += "Content-Type: application/json\r\n";
+                httpResponse += "\r\n";
+            }
         }else if(request.find("POST /admin/KVSinactive") != std::string::npos){
             auto header_end = request.find("\r\n\r\n");
             std::string body = request.substr(header_end + 4);

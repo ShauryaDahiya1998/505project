@@ -17,7 +17,7 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 
 // Handler to return the get method commands
-std::string getMethodHandler(std::string command, KvsCoordOpsClient client);
+std::string getMethodHandler(std::string command, KvsCoordOpsClient client,bool isNodeAlive);
 std::string postMethodhandler(std::string command, std::string body, KvsCoordOpsClient client);
 void setSession(string username, string data, string mdata, string expirationTime, string sessionID, KvsCoordOpsClient client);
 int smtpClient(map<string, string> json,std::string domain,std::string body);

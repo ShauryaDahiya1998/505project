@@ -8,4 +8,6 @@ struct ServerDetails {
 service FrontEndCoordOps {
     void notifyConnectionClosed(1: string serverIP, 2: string port);
     void markServerInactive(1: string serverIP, 2: string port);
+    void keepAlive(1: string ip, 2: string port);
+
 }

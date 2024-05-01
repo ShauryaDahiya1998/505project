@@ -371,7 +371,7 @@ function updateTable(tableId, newData, previousData) {
 
         function toggleServer(ip, port, element) {
             const isActive = element.checked;
-            const url = '/admin/inactive'; // Change this to your actual API endpoint
+            const url = '/admin/inactive'; 
 
             const data = { ip, port, active: isActive }; // Adjust payload as needed for your API
             console.log(data);
@@ -384,7 +384,7 @@ function updateTable(tableId, newData, previousData) {
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    element.checked = '';
                 }
                 console.log(response)
                 return response.json();

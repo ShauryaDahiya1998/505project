@@ -26,16 +26,21 @@
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/server/TThreadedServer.h>
 #include "gen-cpp/StorageOps.h"
 #include "gen-cpp/KvsCoordOps.h"
 #include "gen-cpp/FrontEndCoordOps.h"  
+#include "gen-cpp/FrontEndOps.h"  
+
 
 
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
+using namespace ::apache::thrift::server;
 using namespace storage;
 using namespace FrontEndCoordOps;
+using namespace FrontEndOps;
 using namespace std;
 
 
@@ -60,7 +65,31 @@ atomic<int> currentConnections(0);
 
 const string incorrect_sequence = "503 Bad Sequence of commands\r\n";
 const string okay_response = "250 OK\r\n";
+int portNumber;
+bool isNodeAlive = true;
 
+class FrontEndOpsHandler : virtual public FrontEndOpsIf {
+  void setAlive(const bool isAlive) {
+      cout << "YJER"  << isAlive << endl;
+      isNodeAlive = isAlive;
+  }
+};
+
+void *runThriftServer(void *arg) {
+    int port = *(int*)arg;
+    ::std::shared_ptr<FrontEndOpsHandler> handler(new FrontEndOpsHandler());
+    ::std::shared_ptr<TProcessor> processor(new FrontEndOpsProcessor(handler));
+    ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+    ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+    ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+
+    TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
+    std::cout << "Starting the Thrift server on port " << port << "..." << std::endl;
+    server.serve();
+    return NULL;
+}
+
+void closeConnection();
 // Function to split the input into command and text, considering specific full commands
 void splitCommandAndText(const string& input, string& command, string& text) {
     // Normalize the input to uppercase for comparison
@@ -122,17 +151,9 @@ int getCommandValue(const string& command, const string& command_data) {
 // Signal handler function for main thread
 void signalHandlerMainThread(int signal) {
     if (signal == SIGINT) {
-        // Send SIGUSR1 to worker threads
-        for (pthread_t thread : threadsId) {
-          pthread_kill(thread, SIGUSR1);
-        }
-        // Wait for all worker threads to exit
-        for (vector<pthread_t>::iterator it = threadsId.begin(); it != threadsId.end(); ++it) {
-           pthread_join(*it, NULL);
-        }
-      
-      //Close the server main thread
-      exit(0);
+            cout << "HERE";
+            closeConnection();
+            exit(0);
     }
 
     //If any other signal is received
@@ -206,8 +227,47 @@ void informConnectionClose(){
     try {
         transport->open();  
         std::string serverIp = "127.0.0.1";
-        string serverPort = "9000";
+        string serverPort = to_string(portNumber);
         client.notifyConnectionClosed(serverIp, serverPort);
+        std::cout << "Notified connection closure for: " << serverIp << ":" << serverPort << std::endl;
+        transport->close();  // Close the transport
+    } catch (TException& tx) {
+        std::cerr << "ERROR: " << tx.what() << std::endl;
+    }
+}
+
+void *sendKeepAlive(void *arg) {
+    std::shared_ptr<TSocket> socket(new TSocket("127.0.0.1", 9090));
+    std::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    FrontEndCoordOpsClient client(protocol);
+    while(true) {
+        sleep(1);
+        if(!isNodeAlive)
+        {
+            cout<<"SKIPPING KEEP ALIVE" << endl;
+            continue;
+        }
+        transport->open();
+        std::string serverIp = "127.0.0.1";
+        std::string serverPort = to_string(portNumber);
+        client.keepAlive(serverIp, serverPort);
+        transport->close();
+    }
+}
+
+
+void closeConnection(){
+    std::shared_ptr<TSocket> socket(new TSocket("127.0.0.1", 9090));
+    std::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    FrontEndCoordOpsClient client(protocol);
+
+    try {
+        transport->open();  
+        std::string serverIp = "127.0.0.1";
+        string serverPort = to_string(portNumber);
+        client.markServerInactive(serverIp, serverPort);
         std::cout << "Notified server closure for: " << serverIp << ":" << serverPort << std::endl;
         transport->close();  // Close the transport
     } catch (TException& tx) {
@@ -215,11 +275,9 @@ void informConnectionClose(){
     }
 }
 
-
 // Worker function to handle the client requests
 void *worker(void *arg) {
 
-  //use pthread_mask to block SIGINT
   sigset_t mask;
   sigemptyset(&mask);
   sigaddset(&mask, SIGINT);
@@ -276,7 +334,7 @@ void *worker(void *arg) {
         size_t pos = tmpcommand.find(" ");
         string method = tmpcommand.substr(0, pos);
         if (method == "GET") {
-          content = getMethodHandler(tmpcommand, client);
+          content = getMethodHandler(tmpcommand, client,isNodeAlive);
         } else if (method == "POST") {
           // separate the body of post method from rest of the command
           size_t pos = tmpcommand.find("\r\n\r\n");
@@ -369,28 +427,9 @@ void *worker(void *arg) {
 int main(int argc, char *argv[])
 {
 
-  //Signal handler for SIGINT
-  sigset_t mask;
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGUSR1);
-  struct sigaction sa;
-  sa.sa_mask = mask;
-  sa.sa_handler = signalHandlerMainThread;
-  sa.sa_flags = 0;
-  sigaction(SIGINT, &sa, nullptr);
-
-  //Signal handler for SIGUSR1
-  sigset_t mask1;
-  sigemptyset(&mask1);
-  sigaddset(&mask1, SIGINT);
-  struct sigaction sa1;
-  sa1.sa_mask = mask1;
-  sa1.sa_handler = signalHandlerWorkerThread;
-  sa1.sa_flags = 0;
-  sigaction(SIGUSR1, &sa1, nullptr);
-  
+  signal(SIGINT,signalHandlerMainThread);
   //Default port number and debug flag
-  int portNumber = 9000;
+  portNumber = 9000;
   int debugFlag = 0;
   
   //Initial number of connections
@@ -441,6 +480,21 @@ int main(int argc, char *argv[])
         return -1;
     }
     pthread_detach(smtpThread);
+
+    pthread_t keepAlivethread;
+
+    if (pthread_create(&keepAlivethread, NULL, sendKeepAlive, NULL) != 0) {
+        perror("pthread_create");
+        exit(EXIT_FAILURE);
+    }
+    
+    pthread_detach(keepAlivethread);
+
+    pthread_t thread_id;
+    int thriftPort = portNumber + 92;
+    pthread_create(&thread_id, NULL, runThriftServer, &thriftPort);
+
+
     // Continue with the rest of the main server initialization
     std::cout << "Main server is starting..." << std::endl;
 

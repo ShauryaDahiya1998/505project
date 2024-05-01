@@ -12,7 +12,7 @@ KVS_TARGET = kvs
 
 KVS_CLIENT = client.cc gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp
 
-FRONT_COORD = frontEndCoord.cc gen-cpp/FrontEndCoordOps.cpp gen-cpp/StorageOps.cpp
+FRONT_COORD = frontEndCoord.cc gen-cpp/FrontEndCoordOps.cpp gen-cpp/StorageOps.cpp gen-cpp/FrontEndOps.cpp
 
 FRONT_COORD_TARGET = frontEndCoord
 
@@ -34,7 +34,7 @@ all: $(TARGET) $(KVS_TARGET) $(KVS_COORD_TARGET) $(FRONT_COORD_TARGET)
 # Rule to link the executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking..."
-	$(CXX)  $(CXXFLAGS)  -o $(TARGET)  gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp gen-cpp/FrontEndCoordOps.cpp $(OBJECTS)  -lpthread $(LIBS) -w
+	$(CXX)  $(CXXFLAGS)  -o $(TARGET)  gen-cpp/StorageOps.cpp gen-cpp/KvsCoordOps.cpp gen-cpp/FrontEndCoordOps.cpp gen-cpp/FrontEndOps.cpp $(OBJECTS)  -lpthread $(LIBS) -w
 
 $(KVS_TARGET): $(KVS_SERVER)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
