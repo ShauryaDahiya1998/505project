@@ -1,4 +1,4 @@
-CXX = aarch64-linux-gnu-g++
+CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-declarations -pthread -w
 LIBS = -lthrift -lssl -lcrypto  -lresolv
 
