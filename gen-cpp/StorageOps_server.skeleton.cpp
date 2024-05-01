@@ -55,6 +55,16 @@ class StorageOpsHandler : virtual public StorageOpsIf {
     printf("sync\n");
   }
 
+  void setAlive(const bool isAlive) {
+    // Your implementation goes here
+    printf("setAlive\n");
+  }
+
+  void kvsData(std::string& _return) {
+    // Your implementation goes here
+    printf("kvsData\n");
+  }
+
 };
 
 int main(int argc, char **argv) {
