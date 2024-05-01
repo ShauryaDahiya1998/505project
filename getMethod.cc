@@ -167,30 +167,36 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
             
             std::cout << "EMAIL GOTTEN " << email << endl;
             vector<string> emailComp = splitString(email,"\r\n");
+                     std::cout << emailComp[0] << " Completed " << endl;
+            std::cout << emailComp[1] << " Completed " << endl;
+            std::cout << emailComp[2] << " Completed " << endl;
+            std::cout << emailComp[3] << " Completed " << endl;
             nlohmann::json j;
             j["hash"] = str;
             j["from"] = emailComp[0]; 
             j["time"] = emailComp[1]; 
             j["subject"] = emailComp[2]; 
             j["body"] = emailComp[3]; 
-            string attachHash;
-            kvsClient.get(attachHash,row,str+"-Attachments");
-            if(!attachHash.empty() && attachHash[0]!='-')
-            {            
-                vector<string> attachments;
-                vector<nlohmann::json> attJsons;
-                attachments = splitString(attachHash,",");
-                nlohmann::json ja;
-                for (const auto& att : attachments){
-                    string attachment;
-                    kvsClient.get(attachment,row,str+"-"+att);
-                    vector<string> failComp = splitString(attachment,"\r\n");
-                    ja["fileName"] = failComp[0]; 
-                    ja["fileContent"] = failComp[2]; 
-                    attJsons.push_back(ja);
-                }
-                j["attachment"] = attJsons;
-            }
+   
+
+            // string attachHash;
+            // kvsClient.get(attachHash,row,str+"-Attachments");
+            // if(!attachHash.empty() && attachHash[0]!='-')
+            // {            
+            //     vector<string> attachments;
+            //     vector<nlohmann::json> attJsons;
+            //     attachments = splitString(attachHash,",");
+            //     nlohmann::json ja;
+            //     for (const auto& att : attachments){
+            //         string attachment;
+            //         kvsClient.get(attachment,row,str+"-"+att);
+            //         vector<string> failComp = splitString(attachment,"\r\n");
+            //         ja["fileName"] = failComp[0]; 
+            //         ja["fileContent"] = failComp[2]; 
+            //         attJsons.push_back(ja);
+            //     }
+            //     j["attachment"] = attJsons;
+            // }
             string jsonString = j.dump();
             // responseJson[str] = j;
             sortedEmails.push_back(j);
@@ -199,7 +205,7 @@ string getMethodHandler(string command, KvsCoordOpsClient client) {
         sort(sortedEmails.begin(), sortedEmails.end(), [](const nlohmann::json& a, const nlohmann::json& b) {
             return a["time"] > b["time"]; 
         });
-                    transport->close();
+            transport->close();
 
         nlohmann::json responseJson = nlohmann::json(sortedEmails);
         string jsonString = responseJson.dump();

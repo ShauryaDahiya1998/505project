@@ -269,6 +269,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
     } else if (command == "/login") {
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Contact Us</h1>";
     } else if (command == "/deleteFile") {
+<<<<<<< HEAD
         cout<<"DELETE File/folder"<<endl;
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;
@@ -385,6 +386,8 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string createResponseForPostRequest = response.createPostResponse(response);
         return createResponseForPostRequest;
         
+=======
+>>>>>>> adminConsole
     } else if (command == "/createFile") {
         int cookieIndex = req.find("Cookie: sessionID=");
         string sessionResp;
@@ -806,7 +809,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string subject = j["subject"];
         string body = unescape(j["body"]);
         map<string,string> attachments;
-        string attchHashes="";
+        string attchHashes="None";
         for (const auto& item : j["attachments"]) {
             string timestamp = getCurrentTimestamp();
             string fileName = item["filename"];
@@ -814,7 +817,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
             string file = fileName + "\r\n" + timestamp + "\r\n" + fileContent;
             string hash = sha256(item["filename"] );
             attachments.insert(std::make_pair(hash,file));
-            if(attchHashes=="")
+            if(attchHashes=="None")
                 attchHashes = hash;
             else
                 attchHashes = attchHashes + "," + hash;
@@ -846,7 +849,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
 
             kvsClient.put(row,"AllEmails",emailHashes);  
 
-            kvsClient.put(row,col+"-Attachments",attchHashes);
+            // kvsClient.put(row,col+"-Attachments",attchHashes);
              std::for_each(attachments.begin(), attachments.end(), [&kvsClient, &row, &col](const std::pair<std::string, std::string>& attachment) {
                 kvsClient.put(row, col + "-" + attachment.first, attachment.second);
             });

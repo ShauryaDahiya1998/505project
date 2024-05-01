@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <title>KVStore Data</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 100%;
+            overflow-x: hidden;
+            overflow: hidden; /* Only if you want to disable scrolling */
+
+        }
+        .navbar {
+            background-color: navy;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 25px;
+            font-size: 1.5em;
+        }
+        .welcome-message {
+            font-size: 1em;
+            margin-right: 10px;
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px;
+            height: 100vh;
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+        }
+        .service div {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 1.3em;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .service i {
+            font-size: 1.8em;
+            margin-right: 20px;
+            width: 30px;
+        }
+        .server-info {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .service .fa-home { color: black; } 
+        .service .fa-network-wired { color: green; } 
+        .service .fa-database { color: blue; } 
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .sidebar1 {
+            margin-left: 250px;
+            width: 250px;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+        .main {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .sidebar1 .item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .sidebar .item:hover, .sidebar1 .item.active {
+            background-color: #ddd;
+        }
+        .main .content {
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+        th {
+            background-color: navy;
+            color: white;
+        }
+        td {
+            white-space: normal; /* This will make sure that text in table cells wraps */
+            word-wrap: break-word; /* This ensures that even long words will break and wrap to the next line */
+        }
+        .container, .main, .sidebar1, .sidebar {
+            overflow-x: hidden; /* This should not be necessary if your flex items don't exceed their container's width */
+        }
+
+        table {
+            width: 100%;
+            table-layout: fixed;
+        }   
+
+        #showSidebar1Btn {
+            padding: 10px 10px;
+            margin-top: 20px;
+            margin-left: 50px;
+            margin-right: 15px;
+            cursor: pointer;
+            background-color: #ccc;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #showSidebar1Btn:hover {
+            background-color: #e7e7e7;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+            <p class="welcome-message">Welcome Admin!</p>
+        </div>
+    </div>
+
+  
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="service">
+                <div onclick="fetchNodes()"><i class="fas fa-network-wired"></i> Nodes</div>
+                <div onclick="fetchDataPage()"><i class="fas fa-database"></i> Data</div>
+                <!-- Place the dropdown here inside the sidebar for better alignment -->
+                <select id="nodeSelector" onchange="nodeSelected()" style="width: 100%; padding: 10px; margin-top: 10px;">
+                    <option value="">Select a Node</option>
+                </select>
+                <button id="showSidebar1Btn">Show Rows</button>
+            </div>
+        </div>
+        <div class="sidebar1" id="sidebar1"></div>
+        <div class="main">
+            <div class="content" id="content">
+                <!-- Content goes here -->
+            </div>
+        </div>
+    </div>
+    
+
+<script>
+    let currentKVData = null;
+    function populateSidebar(kvsData) {
+        currentKVData = kvsData;
+        const sidebar = document.getElementById('sidebar1');
+        sidebar.innerHTML = ''; // Clear previous items
+        const content = document.getElementById('content');
+        content.innerHTML = '';
+        console.log(kvsData);
+        Object.keys(kvsData).forEach(key => {
+            console.log(key);
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.textContent = key;
+            item.onclick = () => selectItem(kvsData,key);
+            sidebar.appendChild(item);
+        });
+    }
+
+    function selectItem(kvsData,key) {
+        const items = document.querySelectorAll('.sidebar1 .item');
+        items.forEach(item => {
+            item.classList.remove('active');
+            if (item.textContent === key) {
+                item.classList.add('active');
+            }
+        });
+
+        displayContent(key,kvsData);
+    }
+
+    function formatBody(bodyText) {
+    // Replace each newline character with a <br> tag
+    return bodyText.replace(/\n/g, '<br>');
+    }
+
+    function displayContent(key,kvsData) {
+
+        const content = document.getElementById('content');
+
+        content.innerHTML = '';
+
+        const table = document.createElement('table');
+        const thead = table.createTHead();
+        const tbody = table.createTBody();
+        const row = thead.insertRow();
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Column';
+        row.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Data';
+        row.appendChild(th2);
+
+        Object.entries(kvsData[key]).forEach(([column, data]) => {
+            const tr = tbody.insertRow();
+            const td1 = tr.insertCell();
+            td1.textContent = column;
+
+            const td2 = tr.insertCell();
+            td2.innerHTML = formatBody(data);
+        });
+
+        content.appendChild(table);
+    }
+
+    function fetchNodes() {
+        console.log(url);
+        var url = window.location.origin;
+        window.location.href = '/admin';
+        fetch(url+'/admin',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+
+    function fetchNodesDropDown() {
+        fetch('http://localhost:9091/admin/kvsNodes', {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            populateNodeDropdown(data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while fetching nodes. Please try again.');
+        });
+    }
+
+    // Function to populate the dropdown with nodes
+    function populateNodeDropdown(nodes) {
+        const selector = document.getElementById('nodeSelector');
+        nodes.forEach(node => {
+            const option = document.createElement('option');
+            option.value = node.ip + ":" + node.port;  // Assuming each node object has an "id"
+            option.textContent = node.ip + ":" + node.port; // Assuming each node object has a "name"
+            selector.appendChild(option);
+        });
+    }
+
+    function nodeSelected() {
+        const node = document.getElementById('nodeSelector').value;
+        console.log('Node selected:', node);
+        if (node) {
+            fetchDataFromNode(node);
+        }
+    }
+
+    function fetchDataFromNode(node) {
+        const [ip, port] = node.split(':');
+        const data = {ip, port}; 
+        console.log(data);
+        var url = window.location.origin;
+            fetch(url+ '/admin/KVSData', {
+                method: 'POST', // or 'PUT' depending on your API
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                console.log(response)
+                return response.json();
+            })
+            .then(data => {
+            console.log('Data from node:', data);
+            populateSidebar(data);
+        })
+    }
+
+    function showSidebar1() {
+    if (currentKVData) {
+            populateSidebar(currentKVData); // Re-populate sidebar using the stored data
+        }
+    }
+
+    window.onload = function() {
+        fetchNodesDropDown();
+        document.getElementById('showSidebar1Btn').addEventListener('click', showSidebar1);
+    };
+</script>
+
+</body>
+</html>

@@ -107,7 +107,9 @@
         });
 
     function logout() {
-        fetch('http://localhost:8080/logout', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/logout', {
             method: 'GET',
         })
         .then(response => {
@@ -124,7 +126,9 @@
     }
 
     function fetchUsername() {
-        fetch('http://localhost:8080/getUser', {
+        console.log(url);
+        var url = window.location.origin;
+        fetch(url+'/getUser', {
             method: 'GET',
             })
         .then(response => response.json())
@@ -141,8 +145,10 @@
     }
 
     function fetchMailboxPage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/mailbox';
-        fetch('http://localhost:8080/mailbox',{
+        fetch(url+'/mailbox',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -156,8 +162,11 @@
     }
         
     function fetchDrivePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/drive';
-        fetch('http://localhost:8080/drive',{
+
+        fetch(url+'/drive',{
             method: 'GET',
         })
         .then(response => response.json())
@@ -171,8 +180,10 @@
     }
 
     function fetchHomePage() {
+        console.log(url);
+        var url = window.location.origin;
         window.location.href = '/landing';
-        fetch('http://localhost:8080/landing',{
+        fetch(url+'/landing',{
             method: 'GET',
         })
         .then(response => response.json())

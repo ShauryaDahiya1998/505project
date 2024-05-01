@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennCloud</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Styles -->
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .navbar {
+            background-color: navy;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 25px;
+            font-size: 1.5em;
+        }
+        .welcome-message {
+            font-size: 1em;
+            margin-right: 10px;
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            padding: 20px;
+            width: 250px;
+            height: 100vh;
+            box-shadow: 3px 0px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+        }
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            background: #f8f9fa;
+            width: calc(100% - 280px); /* Sidebar width subtracted from total width */
+            height: calc(100vh - 84px);
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* This centers the tables */
+        }
+        .service div {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 1.3em;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .service i {
+            font-size: 1.8em;
+            margin-right: 20px;
+            width: 30px;
+        }
+        .server-info {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .service .fa-home { color: black; } 
+        .service .fa-network-wired { color: green; } 
+        .service .fa-database { color: blue; } 
+        .main-content {
+            padding: 20px;
+            margin-left: 160px;
+            background: #f8f9fa;
+            min-height: 100vh; /* Full viewport height */
+            width: 100%; /* Use full width */
+            box-sizing: border-box; /* Include padding in width calculation */
+        }
+
+         /* Style for both tables */
+        #serverTable, #storageTable {
+            width: calc(100% - 10px); /* Subtracting the total padding from the width */
+            max-width: 1000px; /* Adjust this value to move the tables to the left */
+            margin-bottom: 20px; /* Space between tables */
+            margin-left: 0px; /* Adding margin to the left of the table */
+            border-collapse: collapse;
+            table-layout: fixed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Shared table cell and header styles */
+        #serverTable th, #serverTable td,
+        #storageTable th, #storageTable td {
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 25%; 
+            
+            
+        }
+
+        th {
+            background-color: #f0f0f0;
+            border-top: none;
+            border-bottom: 2px solid #ddd; /* Make header bottom border more pronounced */
+        }
+        .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+        }
+
+        /* Hide default HTML checkbox */
+        .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        }
+
+        /* The slider */
+        .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+        }
+
+        .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        }
+
+        input:checked + .slider {
+        background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+        box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+        }
+
+        /* Rounded sliders */
+        .slider.round {
+        border-radius: 34px;
+        }
+
+        .slider.round:before {
+        border-radius: 50%;
+        }
+        .dropdown-container {
+            position: absolute; /* Positioning it absolutely will make it relative to the first positioned ancestor */
+            top: 20px; /* Adjust the top margin to place the dropdown */
+            left: 20px; /* Adjust the left margin to place the dropdown */
+            z-index: 1000; /* Ensures the dropdown is above other content */
+        }
+
+        /* Style for the dropdown */
+        #dataNodeSelector {
+            background-color: white; /* Set background color to white */
+            color: black; /* Set text color to black */
+            padding: 8px 16px; /* Add some padding for aesthetics */
+            border: 1px solid #ccc; /* Add a light border for definition */
+            border-radius: 4px; /* Optional: add rounded corners for a smoother look */
+            min-width: 200px; /* Ensure the dropdown is not too narrow */
+            position: relative ;
+        }
+        .hidden-row {
+            display: none;
+        }
+
+        .show-row {
+            display: table-row;
+        }
+
+        /* Add some visual feedback on rows that can be clicked */
+        .clickable-row:hover {
+            background-color: #f0f0f0; /* Light grey background on hover */
+            cursor: pointer;
+        }
+        .selected {
+            background-color: #e0e0e0; /* Light gray to indicate selection */
+        }
+
+        #data-table table {
+            margin-top: 5px;
+            margin-left: 20px; /* Indent nested tables for visual hierarchy */
+        }
+
+        #data-table td {
+            cursor: pointer; /* Visual cue that cells are interactive */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div><p>PennCloud</p></div>
+        <div>
+            <p class="welcome-message">Welcome Admin!</p>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="service">
+            <div onclick="fetchNodes()"><i class="fas fa-network-wired"></i> Nodes</div>
+            <div onclick="fetchDataPage()"><i class="fas fa-database"></i> Data</div>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <!-- Table will be moved into this div dynamically or can be initially hidden here -->
+        <table id="serverTable">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Port</th>
+                    <th>Connections</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="serverTableBody">
+                <!-- Data will be filled in here by JavaScript -->
+            </tbody>
+        </table>
+
+        <table id="storageTable">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Port</th>
+                    <th></th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="storageTableBody">
+                <!-- Data will be filled in here by JavaScript -->
+            </tbody>
+        </table>
+
+        <div class="dropdown-container" id="dataNodeSection" style="display:none;">
+            <select id="dataNodeSelector">
+                <!-- Data node options will be added here -->
+            select>
+        </div>
+
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>Row</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+     
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchNodes();
+            setInterval(fetchNodes, 1000); 
+        });
+
+        let previousServerData = [];
+let previousKVSData = [];
+
+function fetchNodes() {
+    const mainContent = document.getElementById('mainContent');
+    // Only create tables if they don't exist
+    if (!document.getElementById('serverTable')) {
+        mainContent.innerHTML = ''; // Clear only if tables are not present
+        createTable(mainContent, 'serverTable', ['IP', 'Port', 'Connections', 'Status']);
+        createTable(mainContent, 'storageTable', ['IP', 'Port', '', 'Status']);
+    }
+
+    fetchServers();
+    fetchKVSNodes();
+}
+
+function createTable(parent, tableId, headers) {
+    const table = document.createElement('table');
+    table.id = tableId;
+    parent.appendChild(table);
+
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+    headers.forEach(headerText => {
+        const header = document.createElement('th');
+        header.textContent = headerText;
+        headerRow.appendChild(header);
+    });
+
+    table.createTBody();
+}
+
+function fetchServers() {
+    const url = window.location.origin + '/admin/nodes';
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            updateTable('serverTable', data, previousServerData);
+            previousServerData = data; // Update the previous state
+        })
+        .catch(error => console.error('Error fetching nodes:', error));
+}
+
+function fetchKVSNodes() {
+    fetch('http://localhost:9091/admin/kvsNodes')
+        .then(response => response.json())
+        .then(data => {
+            updateTable('storageTable', data, previousKVSData);
+            previousKVSData = data; // Update the previous state
+        })
+        .catch(error => console.error('Error fetching KVS nodes:', error));
+}
+
+function updateTable(tableId, newData, previousData) {
+    const tableBody = document.getElementById(`${tableId}Body`);
+    // Check if data has changed
+    if (JSON.stringify(newData) === JSON.stringify(previousData)) return; // No change
+
+    tableBody.innerHTML = ''; // Clear previous rows only if there's a change
+    newData.forEach(server => {
+        var toggleSwitchHTML;
+        if(tableId=='serverTable')
+        {
+            toggleSwitchHTML = `
+            <label class="switch">
+                <input type="checkbox" ${server.status ? 'checked' : ''}
+                    onchange="toggleServer('${server.ip}', ${server.port}, this)">
+                <span class="slider round"></span>
+            </label>`;
+        }
+        else{
+            toggleSwitchHTML = `
+            <label class="switch">
+                <input type="checkbox" ${server.status ? 'checked' : ''}
+                    onchange="toggleServerKVS('${server.ip}', ${server.port}, this)">
+                <span class="slider round"></span>
+            </label>`;
+        }
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${server.ip}</td>
+            <td>${server.port}</td>
+            <td>${tableId=='storageTable'?'':server.connections}</td>
+            <td>${toggleSwitchHTML}</td>`;
+        tableBody.appendChild(row);
+    });
+}   
+
+        function toggleServer(ip, port, element) {
+            const isActive = element.checked;
+            const url = '/admin/inactive'; // Change this to your actual API endpoint
+
+            const data = { ip, port, active: isActive }; // Adjust payload as needed for your API
+            console.log(data);
+            fetch(url, {
+                method: 'POST', // or 'PUT' depending on your API
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                console.log(response)
+                return response.json();
+            })
+        }
+
+        function toggleServerKVS(ip, port, element) {
+            const isActive = element.checked;
+            const url = '/admin/KVSinactive'; 
+
+            const data = { ip, port, active: isActive }; // Adjust payload as needed for your API
+            console.log(data);
+            fetch(url, {
+                method: 'POST', // or 'PUT' depending on your API
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    element.checked = '';
+                }
+                console.log(response)
+                return response.json();
+            })
+        }
+
+
+        function fetchDataPage() {
+        console.log(url);
+        var url = window.location.origin;
+        window.location.href = '/data';
+        fetch(url+'/data',{
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+        console.log('Success:', data);
+        })
+        .catch((error) => {
+        console.error('Error:', error);
+        showPopup('An error occurred. Please try again.', false, "Error Occurred");
+        });
+    }
+    
+    </script>
+</body>
+</html>

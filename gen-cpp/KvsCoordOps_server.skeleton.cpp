@@ -23,6 +23,16 @@ class KvsCoordOpsHandler : virtual public KvsCoordOpsIf {
     printf("get\n");
   }
 
+  void keepAlive(std::string& _return, const std::string& ip) {
+    // Your implementation goes here
+    printf("keepAlive\n");
+  }
+
+  void syncComplete(std::string& _return, const std::string& ip) {
+    // Your implementation goes here
+    printf("syncComplete\n");
+  }
+
 };
 
 int main(int argc, char **argv) {
