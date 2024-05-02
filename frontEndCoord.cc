@@ -178,11 +178,11 @@ string getKVSData(std::string ip,int port){
     string data;
     client.kvsData(data);
     string escapedData = escapeJSONString(data);
-    std::cout << escapedData << endl;
+    // std::cout << escapedData << endl;
     nlohmann::json jsonData;
     if(!escapedData.empty() || escapedData!="")
         jsonData = nlohmann::json::parse(escapedData);
-    std::cout << jsonData.dump();
+    // std::cout << jsonData.dump();
     transport->close();
     return jsonData.dump();
     }
@@ -251,7 +251,7 @@ int main() {
 
         std::string request(buffer);
         std::string httpResponse;
-        std::cout << request << endl;
+        // std::cout << request << endl;
         std::cout << (request.find("POST /admin/inactiveKVS")!=std::string::npos);
 
         // Check if the request is for the root "/" or for "/admin"

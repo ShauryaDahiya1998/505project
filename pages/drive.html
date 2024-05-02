@@ -338,6 +338,108 @@ function closeLightbox() {
         container.appendChild(icon);
     }
 
+    function handleFilesUpload() {
+    var files = document.getElementById('file-upload').files;
+    if (files.length === 0) return;
+
+    const section = document.getElementById('drive-section');
+    const popup = document.getElementById('upload-popup');
+    const progress = document.getElementById('upload-progress');
+    const status = document.getElementById('upload-status');
+
+    Array.from(files).forEach(file => {
+        const container = document.querySelector('.container');
+        addFileIcon(container, file.name, file.type);
+
+        const chunkSize = 1024 * 300; 
+        let offset = 0; // Offset for slicing the file
+        idx = 0;
+
+        popup.style.display = 'block'; // Show the popup
+        progress.value = 0;
+        progress.max = file.size;
+        status.textContent = 'Uploading...';
+
+        // Function to upload a chunk
+        function uploadChunk(chunkData, currentOffset,index) {
+            // Prepare data to be sent
+            const formData = new FormData();
+
+            // Append the file chunk data; assuming chunkData is a Blob or File object
+            formData.append('fileContent', chunkData, file.name);
+
+            // Append additional data associated with the file
+            formData.append('fileName', file.name);
+            formData.append('fileType', file.type);
+            formData.append('filePosition', currentOffset);
+            // const payload = JSON.stringify({
+            //     fileContent: chunkData,
+            //     fileName: file.name,
+            //     fileType: file.type,
+            //     filePosition: currentOffset
+            // });
+
+            // console.log(chunkData);
+            console.log(url);
+            console.log(index);
+            var url = window.location.origin;
+            fetch(url+'/createFile', {
+                method: 'POST',
+                headers: {'Content-Range': index},
+                body: formData
+            })
+            .then(response => 
+            {
+            response.json()})
+            .then(data => {
+                // console.log('Chunk uploaded successfully', data);
+                offset += chunkSize;
+                progress.value = offset; // Update the progress bar
+                progress.max = file.size;
+                if (offset < file.size) {
+                    readNextChunk(index+1); // Read and send the next chunk
+                } else {
+                    status.textContent = 'File uploaded successfully'; // Update status
+                    console.log('File uploaded successfully');
+                    setTimeout(() => { popup.style.display = 'none'; }, 2000); // Hide popup after 2 seconds
+
+                }
+            })
+            .catch(error => {
+                console.log('Error uploading the chunk', error)
+                status.textContent = 'Error uploading file';
+                popup.style.display = 'none'; // Hide popup on error
+            });
+            
+        }
+
+        // Function to read the nxxt chunk and then upload it
+        function readNextChunk(index) {
+            console.log("CHink done ",index);
+            const fileReader = new FileReader();
+            const nextChunk = file.slice(offset, offset + chunkSize);
+            fileReader.onload = function(event) {
+                const blob = new Blob([event.target.result], {type: file.type});
+                console.log("Size of audioBlob: ", blob.size, "bytes");
+                console.log("Blob ", nextChunk);
+                // Print the audioBlob object (optional)
+                console.log("AudioBlob:", event.target.result);
+                uploadChunk(blob, offset,index);
+            };
+            fileReader.onerror = function(error) {
+                console.error('Error reading chunk', error);
+                status.textContent = 'Error reading file';
+                popup.style.display = 'none'; // Hide popup on error
+            };
+            fileReader.readAsDataURL(nextChunk);
+        }
+
+        // Start the upload process with the first chunk
+        readNextChunk(idx);
+    });
+
+
+
     // function handleFilesUpload() {
     // var files = document.getElementById('file-upload').files;
     // if (files.length === 0) return;
@@ -351,149 +453,98 @@ function closeLightbox() {
     //     const container = document.querySelector('.container');
     //     addFileIcon(container, file.name, file.type);
 
-    //     const chunkSize = 10240; 
+    //     const chunkSize = 10485760; // Size of the chunk
     //     let offset = 0; // Offset for slicing the file
-    //     idx = 0;
+    //     let idx = 0;
 
     //     popup.style.display = 'block'; // Show the popup
     //     progress.value = 0;
     //     progress.max = file.size;
     //     status.textContent = 'Uploading...';
+    //     let promises = [];
 
-    //     // Function to upload a chunk
-    //     function uploadChunk(chunkData, currentOffset,index) {
-    //         // Prepare data to be sent
-    //         const payload = JSON.stringify({
-    //             fileContent: chunkData,
-    //             fileName: file.name,
-    //             fileType: file.type,
-    //             filePosition: currentOffset
-    //         });
+    //     // Function to prepare and get upload chunk promise
+    //     function getUploadPromise(chunkData, currentOffset, index) {
+    //         const formData = new FormData();
 
-    //         // console.log(chunkData);
-    //         console.log(url);
+    //         // Append the file chunk data; assuming chunkData is a Blob or File object
+    //         formData.append('fileContent', chunkData, file.name);
+
+    //         // Append additional data associated with the file
+    //         formData.append('fileName', file.name);
+    //         formData.append('fileType', file.type);
+    //         formData.append('filePosition', currentOffset);
+    //         // const payload = JSON.stringify({
+    //         //     fileContent: chunkData,
+    //         //     fileName: file.name,
+    //         //     fileType: file.type,
+    //         //     filePosition: currentOffset
+    //         // });
     //         var url = window.location.origin;
-    //         fetch(url+'/createFile', {
+    //         console.log(url);
+    //         console.log("this is ihere", index);
+    //         return fetch(url+'/createFile', {
     //             method: 'POST',
-    //             headers: {'Content-Type': 'application/json','Content-Range': index},
-    //             body: payload
-    //         })
-    //         .then(response => 
-    //         {
-    //         response.json()})
-    //         .then(data => {
-    //             // console.log('Chunk uploaded successfully', data);
-    //             offset += chunkSize;
-    //             progress.value = offset; // Update the progress bar
-    //             progress.max = file.size;
-    //             if (offset < file.size) {
-    //                 readNextChunk(index+1); // Read and send the next chunk
-    //             } else {
-    //                 status.textContent = 'File uploaded successfully'; // Update status
-    //                 console.log('File uploaded successfully');
-    //                 setTimeout(() => { popup.style.display = 'none'; }, 2000); // Hide popup after 2 seconds
-
-    //             }
-    //         })
-    //         .catch(error => {
-    //             console.log('Error uploading the chunk', error)
-    //             status.textContent = 'Error uploading file';
-    //             popup.style.display = 'none'; // Hide popup on error
-    //         });
-            
+    //             headers: {'Content-Range': index},
+    //             body: formData
+    //         }).then(response => response.json());
     //     }
 
-    //     // Function to read the nxxt chunk and then upload it
-    //     function readNextChunk(index) {
-    //         console.log("CHink done ",index);
+    //     // Read and upload all chunks
+    //     while (offset < file.size) {
     //         const fileReader = new FileReader();
     //         const nextChunk = file.slice(offset, offset + chunkSize);
-    //         fileReader.onload = function(event) {
-    //             uploadChunk(event.target.result, offset,index);
-    //         };
-    //         fileReader.onerror = function(error) {
-    //             console.error('Error reading chunk', error);
-    //             status.textContent = 'Error reading file';
-    //             popup.style.display = 'none'; // Hide popup on error
-    //         };
-    //         fileReader.readAsDataURL(nextChunk);
+    //         // Use an IIFE to capture the current values of `idx` and `offset`
+    //         (function(currentOffset, currentIndex) {
+    //             promises.push(new Promise((resolve) => {
+    //                 fileReader.onload = function (event) {
+    //                     const blob = new Blob([event.target.result], {type: file.type});
+    //                     // Use the captured values in your asynchronous call
+    //                     resolve(getUploadPromise(blob, currentOffset, currentIndex));
+    //                 };
+    //                 fileReader.onerror = function (error) {
+    //                     console.error('Error reading chunk', error);
+    //                 };
+    //                 fileReader.readAsDataURL(nextChunk);
+    //             }));
+    //         })(offset, idx); // Pass the current values of `offset` and `idx`
+
+    //         offset += chunkSize;
+    //         idx += 1;
     //     }
+        
+    //     // Let's assume `promises` is an array of promises for your chunk uploads
 
-    //     // Start the upload process with the first chunk
-    //     readNextChunk(idx);
+    //     // Update each promise to increment `completedCount` on completion
+    //     const trackedPromises = promises.map(promise =>
+    //         promise
+    //             .then(result => {
+    //                 // Increment and log on each completion, regardless of success or failure
+    //                 progress.value += chunkSize; // Update the progress bar
+    //                 progress.max = file.size;
+    //                 return result; // Forward the original result
+    //             })
+    //             .catch(error => {
+    //                 // Even if there's an error, consider it as completed
+    //                 throw error; // Rethrow to keep the error state
+    //             })
+    //     );
+
+    //     // Wait for all uploads to settle
+    //     Promise.allSettled(trackedPromises).then(results => {
+    //         results.forEach((result, index) => {
+    //             if (result.status === 'fulfilled') {
+    //                 console.log(`Chunk ${index} uploaded successfully`);
+    //             } else {
+    //                 console.log(`Error uploading chunk ${index}:`, result.reason);
+    //             }
+    //         });
+
+    //         progress.value = file.size; // Update the progress bar to full after all chunks are done
+    //         status.textContent = 'File uploaded successfully';
+    //         setTimeout(() => { popup.style.display = 'none'; }, 2000);
+    //     });
     // });
-
-
-
-    function handleFilesUpload() {
-    var files = document.getElementById('file-upload').files;
-    if (files.length === 0) return;
-
-    const section = document.getElementById('drive-section');
-    const popup = document.getElementById('upload-popup');
-    const progress = document.getElementById('upload-progress');
-    const status = document.getElementById('upload-status');
-    const url = window.location.origin;
-
-    popup.style.display = 'block'; // Show the popup
-    progress.value = 0;
-
-    Array.from(files).forEach(file => {
-        const container = document.querySelector('.container');
-        addFileIcon(container, file.name, file.type);
-
-        const chunkSize = 10240; // Size of the chunk
-        let offset = 0; // Offset for slicing the file
-        let promises = [];
-
-        // Function to prepare and get upload chunk promise
-        function getUploadPromise(chunkData, currentOffset, index) {
-            const payload = JSON.stringify({
-                fileContent: chunkData,
-                fileName: file.name,
-                fileType: file.type,
-                filePosition: currentOffset
-            });
-            console.log(url);
-            var url = window.location.origin;
-            return fetch(url + '/createFile', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Range': index },
-                body: payload
-            }).then(response => response.json());
-        }
-
-        // Read and upload all chunks
-        while (offset < file.size) {
-            const nextChunk = file.slice(offset, offset + chunkSize);
-            promises.push(new Promise((resolve) => {
-                const fileReader = new FileReader();
-                fileReader.onload = function (event) {
-                    resolve(getUploadPromise(event.target.result, offset, promises.length));
-                };
-                fileReader.onerror = function (error) {
-                    console.error('Error reading chunk', error);
-                };
-                fileReader.readAsDataURL(nextChunk);
-            }));
-            offset += chunkSize;
-        }
-
-        // Wait for all uploads to settle
-        Promise.allSettled(promises).then(results => {
-            results.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    console.log(`Chunk ${index} uploaded successfully`);
-                } else {
-                    console.log(`Error uploading chunk ${index}:`, result.reason);
-                }
-            });
-
-            progress.value = file.size; // Update the progress bar to full after all chunks are done
-            status.textContent = 'File uploaded successfully';
-            setTimeout(() => { popup.style.display = 'none'; }, 2000);
-        });
-    });
     
     document.getElementById('file-upload').value = ''; // Reset the input after processing
 }
@@ -539,7 +590,7 @@ function closeLightbox() {
                         fileTime = data.time;
                         // console.log("DATA", data.fileContent)
                         // console.log(decodeBase64(data.fileContent));
-                    
+                        console.log(data.fileContent);
                         chunks.push(decodeBase64(data.fileContent));  
                         chunkIndex++;  
                         fetchNextChunk(chunkIndex);  
@@ -611,8 +662,13 @@ function displayImage(base64Chunks, fileName, time) {
 
 
 function displayAudio(base64Chunks, fileName, time) {
+    console.log(base64Chunks.length);
     let blobs = base64Chunks.map(chunk => base64ToBlob(chunk, 'audio/mp3'));
     let audioBlob = new Blob(blobs, {type:  'audio/mp3'});
+    console.log("Size of audioBlob: ", audioBlob.size, "bytes");
+
+    // Print the audioBlob object (optional)
+    console.log("AudioBlob:", audioBlob);
     const audioUrl = URL.createObjectURL(audioBlob);
 
     const audioElement = new Audio(audioUrl);

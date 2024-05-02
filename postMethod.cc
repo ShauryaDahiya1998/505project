@@ -13,6 +13,26 @@
 using namespace storage;
 using namespace std;
 
+void parseMultipartFormData(const std::string& body, std::string& filename, std::string& filecontent, std::string& filetype) {
+
+
+    cout<<"heyyyy baby "<< body.length()<<endl;
+    // Find positions of relevant headers
+    size_t pos = body.find("filename=\"");
+    size_t startOfFilename = pos + 10; // Start after the end of 'filename="'
+    size_t endOfFilename = body.find("\"", startOfFilename);
+    filename = body.substr(startOfFilename, endOfFilename - startOfFilename);
+
+    pos = body.find("Content-Type: ");
+    size_t startOfType = pos + 14; // Start after the end of 'Content-Type: '
+    size_t endOfType = body.find("\r\n\r\n", startOfType);
+    filetype = body.substr(startOfType, endOfType - startOfType);
+
+    size_t startOfContent = endOfType + 4; // Start after the end of '\r\n\r\n'
+    size_t endOfContent = body.find("\r\n--", startOfContent); // Assuming the boundary starts with '--'
+    filecontent = body.substr(startOfContent, endOfContent - startOfContent);
+}
+
 map<string, string> parseJsonLikeString(const string& jsonString) {
     map<string, string> result;
     size_t pos = 0;
@@ -280,7 +300,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
             transport->close();
             cout<<"check seeesion id here -> "<<sessionID<<endl;
         } 
-        cout << sessionResp << endl;
+        //cout << sessionResp << endl;
         string user = splitStrings(sessionResp,",")[0];
         string username = getUsernameFromEmail(user);
 
@@ -292,11 +312,42 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
             index = req.substr(pos, endOfHeader - pos);
         }
 
-        auto parsed = nlohmann::json::parse(body);
-        string fileName = parsed["fileName"];
-        cout << fileName  << endl;
-        string fileContent = unescape(parsed["fileContent"]);
-        string fileType = parsed["fileType"];
+        //string part = body;
+        string fileName, fileContent, fileType;
+
+        parseMultipartFormData(body,fileName, fileContent, fileType);
+
+
+        cout<<"Find ME"<<endl;
+        cout<<fileName.length()<<endl;
+        cout<<fileType.length()<<endl;
+        cout<<fileContent.length()<<endl;
+
+        // if 'filename=' in body:
+        //     filename = re.search(r'filename="(.*?)"', body).group(1)
+        //     filetype = re.search(r'Content-Type: (.*)', body).group(1)
+        //     content_base64 = body.split('\n\n')[1].strip().split(',')[1]
+        //     file_content = b64decode(content_base64)
+        //     print(f"Filename: {filename}")
+        //     print(f"File Type: {filetype}")
+        //     cout<<content_base64<<endl;
+        
+        // return "abc";
+
+        // FormData formData = req.formData();
+
+        // // Access individual parts by name
+        // string fileName = formData.getValue("fileName");
+        // string fileContent = formData.getValue("fileContent"); // Might need decoding
+        // string fileType = formData.getValue("fileType");
+        
+        // // Decode the file content if it is URL-encoded
+        // string decodedContent = urlDecode(fileContent);
+        // auto parsed = nlohmann::json::parse(body);
+        // string fileName = parsed["fileName"];
+        // cout << fileName  << endl;
+        fileContent = unescape(fileContent);
+        // string fileType = parsed["fileType"];
         string row = username+"-storage";
         string timestamp = getCurrentTimestamp();
         string file = fileName + "\r\n" + timestamp + "\r\n" + fileType+ "\r\n" + fileContent;
@@ -344,7 +395,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string fileName = parsed["fileName"];
         cout << fileName << endl;
         string chunk = parsed["chunkIndex"];
-        cout << chunk << endl;
+        //cout << chunk << endl;
         string row = username+"-storage";
         string col = sha256(fileName)+"-"+chunk;
         string file;
@@ -352,7 +403,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
         string time,filetype,filecontent;
 
         kvsClient.get(file,row,col);
-        cout << row << " " << col << " " << file << endl ;
+        //cout << row << " " << col << " " << file << endl ;
         nlohmann::json j;
         if(file[0] != '-'){
             cout << " ";
@@ -363,7 +414,7 @@ string postMethodhandler(string command, string body, KvsCoordOpsClient client) 
             j["fileContent"] = failComp[3];     
         }   
         string jsonString = j.dump();
-        cout << jsonString;
+        //cout << jsonString;
         transport->close();
         response.content_type = "application/json";
         response.message = jsonString;

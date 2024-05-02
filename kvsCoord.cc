@@ -207,7 +207,7 @@ class KvsCoordOpsHandler : virtual public KvsCoordOpsIf {
         }
 
         for (const auto& pair : is_alive) {
-        std::cout << "IP: " << pair.first << " - Worker is alive: " << (pair.second->is_alive ? "Yes" : "No") << std::endl;
+        // std::cout << "IP: " << pair.first << " - Worker is alive: " << (pair.second->is_alive ? "Yes" : "No") << std::endl;
     }
         
     }

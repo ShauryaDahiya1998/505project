@@ -250,26 +250,63 @@ void *worker(void *arg) {
     //Clear the buffer
     memset(buffer, 0, sizeof(buffer));
 
-    //Receive the data from the client
-    int len = recv(fd, &buffer, sizeof(buffer), 0);
-    
-    //If the client has closed the connection
-    if (len == 0) {
-      cerr << "[" << fd<<"] Connection closed by client "<<fd<<endl;
-      break;
+    string request, headers;
+    int received, total_received = 0, content_length = 0;
+
+    // First, read enough of the request to get headers
+    while ((received = recv(fd, &buffer, sizeof(buffer), 0)) > 0) {
+        request.append(buffer, received);
+        // Check if we have received all headers (end of headers is marked by double CRLF)
+        size_t headers_end = request.find("\r\n\r\n");
+        if (headers_end != std::string::npos) {
+            headers = request.substr(0, headers_end);
+            break;
+        }
     }
 
-    //If there is an error in receiving the data
-    else if (len < 0) {
-      cerr<<"Error in receiving data from client "<<fd<<endl;
-      break;
+    // Parse headers to find Content-Length
+    istringstream header_stream(headers);
+    string line;
+    while (getline(header_stream, line)) {
+        if (line.find("Content-Length:") != string::npos) {
+            istringstream(line.substr(15)) >> content_length;
+        }
     }
+
+    // Read the rest of the data
+    total_received = request.size();
+    while (total_received < content_length + headers.size() + 4) { // +4 for the double CRLF
+        received = recv(fd, &buffer, sizeof(buffer), 0);
+        if (received > 0) {
+            request.append(buffer, received);
+            total_received += received;
+        } else {
+            break; // Handle errors appropriately
+        }
+    }
+
+    //Receive the data from the client
+    // int len = recv(fd, &buffer, sizeof(buffer), 0);
+    
+    // //If the client has closed the connection
+    // if (len == 0) {
+    //   cerr << "[" << fd<<"] Connection closed by client "<<fd<<endl;
+    //   break;
+    // }
+
+    // //If there is an error in receiving the data
+    // else if (len < 0) {
+    //   cerr<<"Error in receiving data from client "<<fd<<endl;
+    //   break;
+    // }
 
     //If the data is received successfully, add to tempcommand and process the command
-    tmpcommand = buffer;
+    // tmpcommand = buffer;
+    tmpcommand = request;
     string content = "";
     // cout<<tmpcommand<<endl;
     // check the type of the method, it is till the first space. Could be GET, POST, PUT, DELETE, HEAD
+    // cout <<"BABY U ++I ===" << tmpcommand<< endl;
       if (tmpcommand.find(" ") == string::npos) {
         content = "404 Bad request";
       } else {

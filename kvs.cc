@@ -116,16 +116,6 @@ int whichNode(const string& value) {
     return 0;
 }
 
-void print(){
-    cout << "ROW HERE " << endl;
-    const auto& tablet = tablets.front();
-    for (const auto& row : tablet) {
-        cout << "ROW NEW" << endl;
-        for (const auto& col : row.second) {
-            cout << row.first << " " << col.first << ":" << col.second << endl;
-        }
-    }
-}
 
 void writeTabletToDisk(string filename, int which_tablet) {
     cerr<<"\nWriting tablet to disk with filename: " + filename; 
@@ -283,12 +273,12 @@ void *sendKeepAlive(void *arg) {
         sleep(1);
         if(!isNodeAlive)
         {
-            cout<<"SKIPPING KEEP ALIVE" << endl;
+        //     cout<<"SKIPPING KEEP ALIVE" << endl;
             continue;
         }
         transport->open();
         string ip;
-        cerr<<"\nSENDING KEEP ALIVE WITH IP: "<<my_ip;
+        // cerr<<"\nSENDING KEEP ALIVE WITH IP: "<<my_ip;
         client.keepAlive(ip, my_ip);
         // // if(ip != my_ip) {
         //     //this node just crashed, it needs to sync with the current primary
@@ -400,11 +390,11 @@ class StorageOpsHandler : virtual public StorageOpsIf {
     std::string bytesData = stringToBinary(value);
 
     tablets[whichNode(row)][row][col] = bytesData;
-    cout << whichNode(row) << " "<< tablets[whichNode(row)][row][col] << endl;
+    // cout << whichNode(row) << " "<< tablets[whichNode(row)][row][col] << endl;
     replicatePut(row,col,bytesData);
     string log = "PUT " + row + " " + col + " " + bytesData;
     writeLog(log, whichNode(row));
-    print();
+    // print();
     return true;
   }
 
@@ -527,7 +517,7 @@ class StorageOpsHandler : virtual public StorageOpsIf {
         replayLogFile(logFileNames[0], 0);
         replayLogFile(logFileNames[1], 1);
         replayLogFile(logFileNames[2], 2);
-        print();
+        // print();
         isNodeAlive = isAlive;
     }
   }
@@ -602,7 +592,8 @@ int main(int argc, char *argv[])
     tablets.push_back(primary_tablet);
     tablets.push_back(secondary_tablet);
     tablets.push_back(tertiary_tablet);
-    print();
+    // print();
+
 
     logFileNames.push_back(dir + "/primary_log.txt");
     logFileNames.push_back(dir + "/secondary_log.txt");
